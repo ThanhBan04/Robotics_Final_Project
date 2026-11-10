@@ -1,0 +1,121 @@
+{
+  "ekf_position_rmse": 19.103066873051077,
+  "ekf_velocity_rmse": 14.560837035678718,
+  "ekf_max_position_error": 79.1001959070524,
+  "ukf_position_rmse": 28.11685112054858,
+  "ukf_velocity_rmse": 27.716291853021545,
+  "ukf_max_position_error": 109.40530215855237,
+  "tracking_rmse": 51.476213762373526,
+  "mean_tracking_distance": 75.64990204480087,
+  "max_tracking_distance": 167.7047997666996,
+  "min_tracking_distance": 7.266996960768614,
+  "mean_tracking_error": 39.49484068163874,
+  "max_tracking_error": 117.70479976669961,
+  "settling_time": 4.719999999999987,
+  "ekf_position_max": 79.1001959070524,
+  "ekf_position_mean": 9.814806174555523,
+  "ekf_x_rmse": 11.093300676507408,
+  "ekf_y_rmse": 15.55203665301949,
+  "ukf_position_max": 109.40530215855237,
+  "ukf_position_mean": 16.710312178456416,
+  "ukf_x_rmse": 19.42192229948092,
+  "ukf_y_rmse": 20.33091860020151,
+  "dropout_recovery": {
+    "periods": [
+      {
+        "start_idx": 288,
+        "end_idx": 415,
+        "duration_steps": 127,
+        "ekf_error_before": 1.1114364375139558,
+        "ekf_error_during": 11.561799695786437,
+        "ekf_error_after": 31.913429345522594,
+        "ukf_error_before": 3.405150482537886,
+        "ukf_error_during": 35.32898595625029,
+        "ukf_error_after": 25.07373597339306
+      },
+      {
+        "start_idx": 420,
+        "end_idx": 543,
+        "duration_steps": 123,
+        "ekf_error_before": 21.17549524335919,
+        "ekf_error_during": 39.37136269750042,
+        "ekf_error_after": 3.012948816280765,
+        "ukf_error_before": 50.73549796679784,
+        "ukf_error_during": 35.489940255304894,
+        "ukf_error_after": 7.052077279014021
+      },
+      {
+        "start_idx": 783,
+        "end_idx": 887,
+        "duration_steps": 104,
+        "ekf_error_before": 0.7878335836679008,
+        "ekf_error_during": 15.83456590487563,
+        "ekf_error_after": 4.076414130700557,
+        "ukf_error_before": 2.398359759022784,
+        "ukf_error_during": 34.095424714534175,
+        "ukf_error_after": 12.839984725370314
+      },
+      {
+        "start_idx": 888,
+        "end_idx": 897,
+        "duration_steps": 9,
+        "ekf_error_before": 27.906661359810045,
+        "ekf_error_during": 13.288892864804028,
+        "ekf_error_after": 2.881633131418988,
+        "ukf_error_before": 55.00563273516158,
+        "ukf_error_during": 75.28609215529899,
+        "ukf_error_after": 5.556292319223519
+      },
+      {
+        "start_idx": 1201,
+        "end_idx": 1227,
+        "duration_steps": 26,
+        "ekf_error_before": 1.0056519100715946,
+        "ekf_error_during": 1.9334028466083442,
+        "ekf_error_after": 8.790176182239366,
+        "ukf_error_before": 0.7171098570275857,
+        "ukf_error_during": 3.580357954653544,
+        "ukf_error_after": 13.959401096680935
+      },
+      {
+        "start_idx": 1241,
+        "end_idx": 1255,
+        "duration_steps": 14,
+        "ekf_error_before": 1.333493057120555,
+        "ekf_error_during": 1.6917942773126673,
+        "ekf_error_after": 19.00641654615849,
+        "ukf_error_before": 2.4126735258183856,
+        "ukf_error_during": 3.421426497214502,
+        "ukf_error_after": 28.664020122176794
+      },
+      {
+        "start_idx": 1257,
+        "end_idx": 1276,
+        "duration_steps": 19,
+        "ekf_error_before": 1.6725302306180792,
+        "ekf_error_during": 5.485426711967958,
+        "ekf_error_after": 29.523563416494234,
+        "ukf_error_before": 3.196026069931167,
+        "ukf_error_during": 8.421796097149564,
+        "ukf_error_after": 43.37502364481982
+      },
+      {
+        "start_idx": 1277,
+        "end_idx": 1399,
+        "duration_steps": 122,
+        "ekf_error_before": 2.966473808220528,
+        "ekf_error_during": 37.57992606956741,
+        "ekf_error_after": 4.666277836356409,
+        "ukf_error_before": 4.8827700595162895,
+        "ukf_error_during": 54.15259222410787,
+        "ukf_error_after": 5.997475463142228
+      }
+    ]
+  },
+  "max_separation": 167.7047997666996,
+  "tracking_success_rate": 0.060626249167221855,
+  "mean_uav_speed": 34.776474934280806,
+  "max_uav_speed": 91.75464620063349,
+  "mean_target_speed": 27.157234278237645,
+  "max_target_speed": 36.036687493523026
+}

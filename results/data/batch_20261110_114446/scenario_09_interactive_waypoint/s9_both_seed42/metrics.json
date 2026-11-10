@@ -1,0 +1,72 @@
+{
+  "ekf_position_rmse": 31.00908447490907,
+  "ekf_velocity_rmse": 17.210049785653286,
+  "ekf_max_position_error": 106.9948780560036,
+  "ukf_position_rmse": 36.70048446152346,
+  "ukf_velocity_rmse": 23.84343660439021,
+  "ukf_max_position_error": 114.04371924245476,
+  "tracking_rmse": 64.5599678359621,
+  "mean_tracking_distance": 90.3436646949138,
+  "max_tracking_distance": 173.0338112735685,
+  "min_tracking_distance": 1.7475804898166836,
+  "mean_tracking_error": 52.486460327229295,
+  "max_tracking_error": 123.03381127356849,
+  "settling_time": 4.799999999999986,
+  "ekf_position_max": 106.9948780560036,
+  "ekf_position_mean": 16.762983873184677,
+  "ekf_x_rmse": 12.739787270095283,
+  "ekf_y_rmse": 28.27120691241824,
+  "ukf_position_max": 114.04371924245476,
+  "ukf_position_mean": 21.439337623220005,
+  "ukf_x_rmse": 24.57644401600531,
+  "ukf_y_rmse": 27.256631472701866,
+  "dropout_recovery": {
+    "periods": [
+      {
+        "start_idx": 279,
+        "end_idx": 551,
+        "duration_steps": 272,
+        "ekf_error_before": 1.5921534529468633,
+        "ekf_error_during": 38.605627689859986,
+        "ekf_error_after": 7.789129428523734,
+        "ukf_error_before": 1.603441722615554,
+        "ukf_error_during": 36.735651113552365,
+        "ukf_error_after": 5.1945649192724375
+      },
+      {
+        "start_idx": 787,
+        "end_idx": 918,
+        "duration_steps": 131,
+        "ekf_error_before": 0.769252423779792,
+        "ekf_error_during": 27.520897886084914,
+        "ekf_error_after": 1.4428866801543132,
+        "ukf_error_before": 2.1788157048711234,
+        "ukf_error_during": 51.70750803932078,
+        "ukf_error_after": 6.701477366992979
+      },
+      {
+        "start_idx": 1165,
+        "end_idx": 1309,
+        "duration_steps": 144,
+        "ekf_error_before": 1.1126578996499343,
+        "ekf_error_during": 27.73337914963511,
+        "ekf_error_after": 1.4283144301392638,
+        "ukf_error_before": 2.007992480388487,
+        "ukf_error_during": 44.04091069035658,
+        "ukf_error_after": 5.080050274706243
+      }
+    ]
+  },
+  "max_separation": 173.0338112735685,
+  "tracking_success_rate": 0.09423186750428326,
+  "mean_uav_speed": 40.58150554646483,
+  "max_uav_speed": 96.1326784892299,
+  "mean_target_speed": 28.71154813674742,
+  "max_target_speed": 39.041932389172715,
+  "scenario_id": 9,
+  "scenario_name": "Interactive Waypoint",
+  "filter_mode": "both",
+  "seed": 42,
+  "duration": 35.019999999999875,
+  "steps": 1751
+}

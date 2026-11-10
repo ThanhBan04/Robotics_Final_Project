@@ -1,0 +1,110 @@
+{
+  "ekf_position_rmse": 10.068319799795763,
+  "ekf_velocity_rmse": 7.346057770053606,
+  "ekf_max_position_error": 25.411078162670652,
+  "ukf_position_rmse": 8.74433233236247,
+  "ukf_velocity_rmse": 6.656848751550772,
+  "ukf_max_position_error": 19.965706525132795,
+  "tracking_rmse": 44.844459952463836,
+  "mean_tracking_distance": 64.69413035267017,
+  "max_tracking_distance": 174.46614045034258,
+  "min_tracking_distance": 10.052348443640009,
+  "mean_tracking_error": 27.484875847469123,
+  "max_tracking_error": 124.46614045034258,
+  "settling_time": 4.639999999999989,
+  "ekf_position_max": 25.411078162670652,
+  "ekf_position_mean": 7.413391352906193,
+  "ekf_x_rmse": 7.664122925655061,
+  "ekf_y_rmse": 6.529340194185618,
+  "ukf_position_max": 19.965706525132795,
+  "ukf_position_mean": 7.098954042959512,
+  "ukf_x_rmse": 6.1596376144360985,
+  "ukf_y_rmse": 6.206626490906604,
+  "dropout_recovery": {
+    "periods": [
+      {
+        "start_idx": 303,
+        "end_idx": 385,
+        "duration_steps": 82,
+        "ekf_error_before": 0.5984802480257408,
+        "ekf_error_during": 2.172847151272164,
+        "ekf_error_after": 3.1705623108432635,
+        "ukf_error_before": 0.6162800733722963,
+        "ukf_error_during": 7.358890551070423,
+        "ukf_error_after": 2.6642395410460016
+      },
+      {
+        "start_idx": 411,
+        "end_idx": 449,
+        "duration_steps": 38,
+        "ekf_error_before": 2.308250835248932,
+        "ekf_error_during": 4.184192812371002,
+        "ekf_error_after": 2.8573603644982133,
+        "ukf_error_before": 6.854308682722339,
+        "ukf_error_during": 2.7434261564597087,
+        "ukf_error_after": 3.178416729524427
+      },
+      {
+        "start_idx": 472,
+        "end_idx": 490,
+        "duration_steps": 18,
+        "ekf_error_before": 4.8943904604103565,
+        "ekf_error_during": 0.9019019589284506,
+        "ekf_error_after": 2.5573003628073776,
+        "ukf_error_before": 3.4198054331999197,
+        "ukf_error_during": 0.787644020997611,
+        "ukf_error_after": 3.4533210555583667
+      },
+      {
+        "start_idx": 601,
+        "end_idx": 767,
+        "duration_steps": 166,
+        "ekf_error_before": 2.8557927893526487,
+        "ekf_error_during": 14.828224725969504,
+        "ekf_error_after": 7.802079465343711,
+        "ukf_error_before": 3.5570245368284987,
+        "ukf_error_during": 6.397947044415491,
+        "ukf_error_after": 7.042835185573016
+      },
+      {
+        "start_idx": 1051,
+        "end_idx": 1073,
+        "duration_steps": 22,
+        "ekf_error_before": 14.15416786091711,
+        "ekf_error_during": 13.550298324499435,
+        "ekf_error_after": 14.161389272411736,
+        "ukf_error_before": 14.114358178408631,
+        "ukf_error_during": 14.613701118839334,
+        "ukf_error_after": 13.615769631875539
+      },
+      {
+        "start_idx": 1082,
+        "end_idx": 1098,
+        "duration_steps": 16,
+        "ekf_error_before": 13.860640688270085,
+        "ekf_error_during": 12.135264381768433,
+        "ekf_error_after": 16.040759624042902,
+        "ukf_error_before": 14.338055398075069,
+        "ukf_error_during": 11.84980798268003,
+        "ukf_error_after": 15.197443440103676
+      },
+      {
+        "start_idx": 1104,
+        "end_idx": 1112,
+        "duration_steps": 8,
+        "ekf_error_before": 13.079827025310651,
+        "ekf_error_during": 13.557491247234942,
+        "ekf_error_after": 16.942468791341536,
+        "ukf_error_before": 13.508155487912394,
+        "ukf_error_during": 13.723911542217484,
+        "ukf_error_after": 15.960232253431736
+      }
+    ]
+  },
+  "max_separation": 174.46614045034258,
+  "tracking_success_rate": 0.17665867306155075,
+  "mean_uav_speed": 35.060725638840076,
+  "max_uav_speed": 97.02200467876177,
+  "mean_target_speed": 28.10726876077595,
+  "max_target_speed": 35.42666407455198
+}

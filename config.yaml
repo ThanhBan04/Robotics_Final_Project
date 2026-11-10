@@ -1,0 +1,88 @@
+# ============================================================
+# UAV Target Tracking 2D - Configuration File
+# ============================================================
+
+simulation:
+  dt: 0.02               # Simulation timestep (seconds)
+  duration: 30.0          # Default simulation duration (seconds)
+  random_seed: 42         # Random seed for reproducibility
+  world_width: 1200       # Simulation world width (meters)
+  world_height: 800       # Simulation world height (meters)
+
+target:
+  initial_x: 300.0        # Initial X position (m)
+  initial_y: 400.0        # Initial Y position (m)
+  initial_vx: 30.0        # Initial X velocity (m/s)
+  initial_vy: 0.0         # Initial Y velocity (m/s)
+  max_speed: 80.0         # Maximum speed (m/s)
+  max_acceleration: 20.0  # Maximum acceleration (m/s^2)
+  process_noise_std: 1.0  # Process noise standard deviation
+
+uav:
+  initial_x: 100.0        # Initial X position (m)
+  initial_y: 400.0        # Initial Y position (m)
+  initial_vx: 0.0         # Initial X velocity (m/s)
+  initial_vy: 0.0         # Initial Y velocity (m/s)
+  max_speed: 100.0        # Maximum speed (m/s)
+  max_acceleration: 25.0  # Maximum acceleration (m/s^2)
+
+camera:
+  measurement_model: "range_bearing"  # "xy" or "range_bearing"
+  fov_angle: 120.0        # Field of view angle (degrees)
+  max_range: 500.0        # Maximum detection range (m)
+  noise_range_std: 2.0    # Range measurement noise std (m)
+  noise_bearing_std: 0.05 # Bearing measurement noise std (rad)
+  noise_xy_std: 3.0       # XY measurement noise std (m) - used when model is "xy"
+  dropout_probability: 0.0  # Probability of detection dropout per frame
+  dropout_duration: 0.0   # Duration of forced dropout (s), 0 = no forced dropout
+  delay: 0.0              # Measurement delay (s)
+  measurement_rate: 50.0  # Measurements per second (Hz)
+
+filter:
+  selected: "ekf"         # "ekf" or "ukf" or "both"
+  process_noise_q: 5.0    # Process noise parameter for filter Q matrix
+  # EKF-specific
+  ekf: {}
+  # UKF-specific
+  ukf:
+    alpha: 0.1
+    beta: 2.0
+    kappa: 0.0
+
+pid:
+  kp: 2.0                 # Proportional gain
+  ki: 0.1                 # Integral gain
+  kd: 1.5                 # Derivative gain
+  desired_distance: 50.0  # Desired following distance (m)
+  integral_limit: 50.0    # Anti-windup integral limit
+  derivative_filter: 0.1  # Derivative low-pass filter coefficient
+
+scenario:
+  name: "baseline"        # Scenario name
+  trajectory: "straight"  # straight, circular, sinusoidal, zigzag, waypoint, random
+  # Trajectory-specific parameters
+  circular_radius: 150.0
+  circular_omega: 0.3
+  sinusoidal_amplitude: 100.0
+  sinusoidal_frequency: 0.2
+  zigzag_amplitude: 80.0
+  zigzag_period: 5.0
+  waypoints: [[300,400],[500,300],[700,500],[500,600],[300,400]]
+  # Stress test timeline (for scenario 7)
+  stress_timeline:
+    - {time: 0, event: "normal"}
+    - {time: 5, event: "target_turn", angle: 90}
+    - {time: 8, event: "high_noise", noise_multiplier: 5.0}
+    - {time: 12, event: "dropout", duration: 3.0}
+    - {time: 15, event: "delay", delay_seconds: 0.3}
+
+display:
+  window_width: 1280
+  window_height: 680
+  fps: 60
+  show_ground_truth: true
+  show_measurements: true
+  show_estimates: true
+  show_fov: true
+  show_velocity_vectors: true
+  trail_length: 200
