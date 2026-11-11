@@ -34,22 +34,24 @@ class PIDController:
     def __init__(self,
                  kp: float = 2.0,
                  ki: float = 0.1,
-                 kd: float = 1.5,
+                 kd: float = 2.8,
                  desired_distance: float = 50.0,
                  integral_limit: float = 50.0,
-                 derivative_filter: float = 0.1,
-                 max_acceleration: float = 25.0):
+                 derivative_filter: float = 0.2,
+                 max_acceleration: float = 25.0,
+                 min_safety_distance: float = 20.0):
         """
         Initialize PID controller.
         
         Args:
             kp: Proportional gain
             ki: Integral gain
-            kd: Derivative gain
+            kd: Derivative gain (critically damped kd ~= 2*sqrt(kp) ~= 2.8)
             desired_distance: Desired following distance (m)
             integral_limit: Anti-windup integral clamp
             derivative_filter: Low-pass filter coefficient for derivative (0-1)
             max_acceleration: Maximum output acceleration
+            min_safety_distance: Minimum safety buffer distance to target (m)
         """
         self.kp = kp
         self.ki = ki
@@ -58,6 +60,7 @@ class PIDController:
         self.integral_limit = integral_limit
         self.derivative_filter = derivative_filter
         self.max_acceleration = max_acceleration
+        self.min_safety_distance = min_safety_distance
         
         # Internal state
         self.integral_x = 0.0
@@ -163,7 +166,7 @@ class PIDController:
         i_x = self.ki * self.integral_x
         i_y = self.ki * self.integral_y
         
-        # --- Derivative with filtering ---
+        # --- Derivative with filtering & relative velocity damping ---
         raw_derivative_x = (error_x - self.prev_error_x) / dt
         raw_derivative_y = (error_y - self.prev_error_y) / dt
         
@@ -172,8 +175,14 @@ class PIDController:
         filtered_derivative_x = alpha * raw_derivative_x + (1 - alpha) * self.prev_derivative_x
         filtered_derivative_y = alpha * raw_derivative_y + (1 - alpha) * self.prev_derivative_y
         
-        d_x = self.kd * filtered_derivative_x
-        d_y = self.kd * filtered_derivative_y
+        # Combine numerical derivative with estimated relative velocity damping
+        target_vx = estimated_target_state.get('vx', 0.0)
+        target_vy = estimated_target_state.get('vy', 0.0)
+        v_rel_x = target_vx - uav_state.vx
+        v_rel_y = target_vy - uav_state.vy
+        
+        d_x = self.kd * (0.6 * filtered_derivative_x + 0.4 * v_rel_x)
+        d_y = self.kd * (0.6 * filtered_derivative_y + 0.4 * v_rel_y)
         
         # Store for next iteration
         self.prev_error_x = error_x
@@ -181,9 +190,41 @@ class PIDController:
         self.prev_derivative_x = filtered_derivative_x
         self.prev_derivative_y = filtered_derivative_y
         
-        # --- Total command ---
+        # --- Base command ---
         ax = p_x + i_x + d_x
         ay = p_y + i_y + d_y
+        
+        # --- Anti-overshoot & Safety Repulsive Buffer ---
+        # Prevent UAV from getting dangerously close to the target
+        target_x = estimated_target_state.get('x', uav_state.x + 50.0)
+        target_y = estimated_target_state.get('y', uav_state.y)
+        vec_to_target = np.array([target_x - uav_state.x, target_y - uav_state.y])
+        dist_to_target = float(np.linalg.norm(vec_to_target))
+        
+        if dist_to_target > 1e-3:
+            u_los = vec_to_target / dist_to_target
+            # Closing speed towards target (positive when getting closer)
+            closing_speed = (uav_state.vx - target_vx) * u_los[0] + (uav_state.vy - target_vy) * u_los[1]
+            
+            # Approach speed limit when inside desired following distance
+            if dist_to_target < self.desired_distance + 15.0:
+                safe_margin = max(0.0, dist_to_target - self.min_safety_distance)
+                max_closing_speed = np.sqrt(2.0 * 8.0 * safe_margin)
+                if closing_speed > max_closing_speed:
+                    excess = closing_speed - max_closing_speed
+                    brake_acc = -min(self.max_acceleration * 0.8, excess * 4.0)
+                    ax += brake_acc * u_los[0]
+                    ay += brake_acc * u_los[1]
+                    
+            # Emergency repulsive buffer when closer than min_safety_distance
+            if dist_to_target < self.min_safety_distance:
+                penetration = (self.min_safety_distance - dist_to_target) / self.min_safety_distance
+                repulse = self.max_acceleration * min(1.0, penetration * 1.5)
+                ax -= repulse * u_los[0]
+                ay -= repulse * u_los[1]
+                # Reset integrator to prevent windup against safety buffer
+                self.integral_x *= 0.5
+                self.integral_y *= 0.5
         
         # Saturate acceleration
         acc = np.array([ax, ay])

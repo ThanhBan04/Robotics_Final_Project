@@ -108,6 +108,27 @@ python batch_runner.py --mode headless --scenarios 1,2,3,4,5,6,7,8,9,10,11,12 --
 python main.py --mode headless --scenario 1 --filter both --seed 42
 ```
 
+### 5. Chạy bộ thí nghiệm khoa học toàn diện (TN0 -> TN7)
+Để tái lập đầy đủ toàn bộ số liệu thống kê Monte Carlo, quét tham số, phân tích phi tuyến và đánh giá tính nhất quán:
+```bash
+python experiments/run_experiments.py --seeds 20
+```
+Hoặc chạy từng thí nghiệm độc lập:
+```bash
+python experiments/run_experiments.py --exp tn0 --seeds 20  # Monte Carlo 12 kịch bản
+python experiments/run_experiments.py --exp tn1            # Đối chứng không dùng bộ lọc
+python experiments/run_experiments.py --exp tn2            # Quét mức nhiễu cảm biến
+python experiments/run_experiments.py --exp tn3            # Quét thời gian mất tín hiệu
+python experiments/run_experiments.py --exp tn4            # Tách camera dropout và estimation loss
+python experiments/run_experiments.py --exp tn5            # Quét phi tuyến EKF vs UKF
+python experiments/run_experiments.py --exp tn6            # NEES/NIS và benchmark tốc độ
+```
+Kết quả và biểu đồ được tự động lưu trong `results/experiments/`.
+
+Lưu ý: scenario 8–12 là chế độ tương tác khi chạy GUI. Khi chạy batch/headless,
+các scenario này dùng quỹ đạo điều khiển định sẵn trong `simulation/target_scenario.py`
+để bảo đảm tái lập; chúng không nhận thao tác chuột/bàn phím thật.
+
 ---
 
 ## 7 Kịch bản kiểm thử định trước
@@ -247,6 +268,8 @@ Mỗi lượt chạy lưu vào `results/data/`:
 4. Khi so sánh EKF/UKF → Cùng measurement sequence, cùng seed, cùng khởi tạo
 5. Mục tiêu di chuyển theo giới hạn vận tốc/gia tốc, **không teleport**
 6. Random seed được lưu để **tái lập kết quả**
+7. Các kịch bản 8–11 khi chạy hàng loạt (headless / batch) sử dụng quỹ đạo định sẵn (deterministic) để đảm bảo khả năng tái lập khoa học
+8. Phương pháp tích phân số học Euler bán ẩn (Semi-implicit Euler) được áp dụng thống nhất cho cả mô hình động học UAV và mục tiêu
 
 ---
 

@@ -47,8 +47,8 @@ def scenario_1_baseline(cfg: dict) -> Dict[str, Any]:
         'description': 'Target moves straight; low camera noise; no dropout/delay',
         'duration': 30.0,
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 30.0, 'initial_vy': 5.0,
+            'initial_x': 200.0, 'initial_y': 400.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 80.0, 'max_acceleration': 20.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
@@ -74,14 +74,14 @@ def scenario_2_sudden_maneuver(cfg: dict) -> Dict[str, Any]:
         'description': 'Target turns 90° at t=10s',
         'duration': 30.0,
         'target': {
-            'initial_x': 200.0, 'initial_y': 400.0,
-            'initial_vx': 40.0, 'initial_vy': 0.0,
+            'initial_x': 200.0, 'initial_y': 200.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 80.0, 'max_acceleration': 30.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
         },
         'uav': {
-            'initial_x': 100.0, 'initial_y': 400.0,
+            'initial_x': 100.0, 'initial_y': 200.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -103,8 +103,8 @@ def scenario_3_high_noise(cfg: dict) -> Dict[str, Any]:
         'description': 'Camera noise increases at t=5s, t=10s, t=15s',
         'duration': 30.0,
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 30.0, 'initial_vy': 5.0,
+            'initial_x': 200.0, 'initial_y': 400.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 80.0, 'max_acceleration': 20.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
@@ -137,8 +137,8 @@ def scenario_4_lost_detection(cfg: dict) -> Dict[str, Any]:
         'description': 'Camera dropout from t=8s to t=13s',
         'duration': 30.0,
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 30.0, 'initial_vy': 5.0,
+            'initial_x': 200.0, 'initial_y': 400.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 80.0, 'max_acceleration': 20.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
@@ -167,8 +167,8 @@ def scenario_5_normal_tracking(cfg: dict) -> Dict[str, Any]:
         'description': 'UAV starts offset; must track and maintain distance',
         'duration': 30.0,
         'target': {
-            'initial_x': 400.0, 'initial_y': 300.0,
-            'initial_vx': 25.0, 'initial_vy': 10.0,
+            'initial_x': 200.0, 'initial_y': 400.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 60.0, 'max_acceleration': 15.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'sinusoidal',
@@ -176,7 +176,7 @@ def scenario_5_normal_tracking(cfg: dict) -> Dict[str, Any]:
             'sinusoidal_frequency': 0.15,
         },
         'uav': {
-            'initial_x': 100.0, 'initial_y': 500.0,
+            'initial_x': 100.0, 'initial_y': 450.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -196,14 +196,14 @@ def scenario_6_turning_tracking(cfg: dict) -> Dict[str, Any]:
         'description': 'Target turns 90° at t=8s and t=16s while UAV tracks',
         'duration': 30.0,
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 35.0, 'initial_vy': 0.0,
+            'initial_x': 200.0, 'initial_y': 250.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 80.0, 'max_acceleration': 25.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
         },
         'uav': {
-            'initial_x': 150.0, 'initial_y': 400.0,
+            'initial_x': 100.0, 'initial_y': 250.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -226,14 +226,14 @@ def scenario_7_combined_stress(cfg: dict) -> Dict[str, Any]:
         'description': 'Turn + high noise + dropout + delay combined',
         'duration': 25.0,
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 35.0, 'initial_vy': 5.0,
+            'initial_x': 200.0, 'initial_y': 200.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 80.0, 'max_acceleration': 25.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
         },
         'uav': {
-            'initial_x': 150.0, 'initial_y': 400.0,
+            'initial_x': 100.0, 'initial_y': 200.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -298,17 +298,17 @@ def scenario_9_interactive_waypoint(cfg: dict) -> Dict[str, Any]:
         'is_interactive': True,
         'interactive_mode': 'waypoint',
         'target': {
-            'initial_x': 250.0, 'initial_y': 350.0,
-            'initial_vx': 30.0, 'initial_vy': 0.0,
-            'max_speed': 65.0, 'max_acceleration': 25.0,
+            'initial_x': 200.0, 'initial_y': 350.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
+            'max_speed': 55.0, 'max_acceleration': 20.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'waypoint',
             'waypoints': [
-                [450.0, 250.0],
-                [650.0, 350.0],
-                [550.0, 550.0],
-                [300.0, 500.0],
-                [250.0, 350.0],
+                [400.0, 250.0],
+                [600.0, 350.0],
+                [700.0, 500.0],
+                [500.0, 600.0],
+                [300.0, 450.0],
             ],
         },
         'uav': {
@@ -334,16 +334,16 @@ def scenario_10_mouse_drag(cfg: dict) -> Dict[str, Any]:
         'is_interactive': True,
         'interactive_mode': 'drag',
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 30.0, 'initial_vy': 10.0,
+            'initial_x': 200.0, 'initial_y': 400.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 70.0, 'max_acceleration': 25.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'sinusoidal',
-            'sinusoidal_amplitude': 80.0,
-            'sinusoidal_frequency': 0.2,
+            'sinusoidal_amplitude': 70.0,
+            'sinusoidal_frequency': 0.15,
         },
         'uav': {
-            'initial_x': 150.0, 'initial_y': 400.0,
+            'initial_x': 100.0, 'initial_y': 400.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -365,14 +365,14 @@ def scenario_11_keyboard_control(cfg: dict) -> Dict[str, Any]:
         'is_interactive': True,
         'interactive_mode': 'keyboard',
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 35.0, 'initial_vy': 0.0,
+            'initial_x': 150.0, 'initial_y': 250.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 75.0, 'max_acceleration': 25.0,
             'process_noise_std': 0.5,
             'trajectory_type': 'straight',
         },
         'uav': {
-            'initial_x': 150.0, 'initial_y': 400.0,
+            'initial_x': 50.0, 'initial_y': 250.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -383,7 +383,7 @@ def scenario_11_keyboard_control(cfg: dict) -> Dict[str, Any]:
         },
         'maneuvers': [
             {'time': 6.0, 'type': 'turn', 'angle': 60, 'duration': 0.5},
-            {'time': 12.0, 'type': 'speed', 'target_speed': 60.0, 'duration': 1.0},
+            {'time': 12.0, 'type': 'speed', 'target_speed': 40.0, 'duration': 1.0},
             {'time': 18.0, 'type': 'turn', 'angle': -90, 'duration': 0.5},
             {'time': 24.0, 'type': 'speed', 'target_speed': 20.0, 'duration': 1.0},
         ],
@@ -391,22 +391,24 @@ def scenario_11_keyboard_control(cfg: dict) -> Dict[str, Any]:
 
 
 def scenario_12_evasive_target(cfg: dict) -> Dict[str, Any]:
-    """Scenario 12: Sudden Escape / Evasive Target - evasive maneuvers, bursts."""
+    """Scenario 12: Sudden Escape / Evasive Target - evasive zigzag maneuvers."""
     return {
         'name': 'Evasive Target',
-        'description': 'High agility, rapid direction shifts, acceleration bursts',
+        'description': 'High agility, rapid direction shifts via zigzag maneuvers and acceleration bursts',
         'duration': 30.0,
         'is_interactive': True,
         'interactive_mode': 'keyboard',
         'target': {
-            'initial_x': 300.0, 'initial_y': 400.0,
+            'initial_x': 150.0, 'initial_y': 400.0,
             'initial_vx': 25.0, 'initial_vy': 0.0,
             'max_speed': 65.0, 'max_acceleration': 25.0,
             'process_noise_std': 0.5,
-            'trajectory_type': 'straight',
+            'trajectory_type': 'zigzag',
+            'zigzag_amplitude': 80.0,
+            'zigzag_period': 4.0,
         },
         'uav': {
-            'initial_x': 150.0, 'initial_y': 400.0,
+            'initial_x': 50.0, 'initial_y': 400.0,
             'initial_vx': 0.0, 'initial_vy': 0.0,
         },
         'camera': {
@@ -416,11 +418,8 @@ def scenario_12_evasive_target(cfg: dict) -> Dict[str, Any]:
             'delay': 0.0,
         },
         'maneuvers': [
-            {'time': 5.0, 'type': 'turn', 'angle': 120, 'duration': 1.0},
-            {'time': 10.0, 'type': 'speed', 'target_speed': 55.0, 'duration': 1.0},
-            {'time': 15.0, 'type': 'turn', 'angle': -135, 'duration': 1.0},
-            {'time': 20.0, 'type': 'turn', 'angle': 90, 'duration': 1.0},
-            {'time': 24.0, 'type': 'speed', 'target_speed': 30.0, 'duration': 1.0},
+            {'time': 8.0, 'type': 'speed', 'target_speed': 35.0, 'duration': 1.0},
+            {'time': 18.0, 'type': 'speed', 'target_speed': 25.0, 'duration': 1.0},
         ],
     }
 

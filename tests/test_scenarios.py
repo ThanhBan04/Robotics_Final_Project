@@ -59,3 +59,49 @@ def test_simulation_with_steady_state_init():
     step = engine.simulation_step()
     # At t=0, distance should be very close to 50m
     assert abs(step.tracking_distance - 50.0) < 5.0
+
+
+def test_compute_metrics_required_keys():
+    from simulation.simulation_engine import SimulationEngine
+    scfg = get_scenario_config(1)
+    engine = SimulationEngine()
+    engine.setup(scfg)
+    for _ in range(50):
+        engine.simulation_step()
+    m = engine.compute_metrics()
+    required_keys = [
+        'max_separation', 'pid_step_jitter', 'pid_saturation_ratio',
+        'camera_dropout_detected', 'has_lost_target', 'tracking_rmse_post10'
+    ]
+    for k in required_keys:
+        assert k in m, f"Key '{k}' missing from compute_metrics output"
+
+
+def test_target_stays_within_bounds_all_12_scenarios():
+    """Verify that in all 12 scenarios, target stays within [20, 1180] x [20, 780] and never touches boundaries."""
+    from simulation.simulation_engine import SimulationEngine
+    for sc_id in range(1, 13):
+        scfg = get_scenario_config(sc_id)
+        engine = SimulationEngine()
+        engine.setup(scfg)
+        w, h = engine.world_width, engine.world_height
+        margin = 20.0
+        
+        # Run entire scenario
+        while engine.running:
+            step = engine.simulation_step()
+            tgt = step.target_gt
+            assert margin <= tgt.x <= w - margin, f"Target x={tgt.x:.1f} hit boundary in Scenario {sc_id}"
+            assert margin <= tgt.y <= h - margin, f"Target y={tgt.y:.1f} hit boundary in Scenario {sc_id}"
+
+
+def test_minimum_tracking_distance_safety():
+    """Verify that PID controller maintains safe separation (no near collisions < 5m) on baseline & turning."""
+    from simulation.simulation_engine import SimulationEngine
+    for sc_id in [1, 2, 6]:
+        scfg = get_scenario_config(sc_id)
+        engine = SimulationEngine()
+        engine.setup(scfg)
+        engine.run_headless()
+        m = engine.compute_metrics()
+        assert m['min_tracking_distance'] >= 10.0, f"Scenario {sc_id} penetrated safety buffer: min dist = {m['min_tracking_distance']:.2f}m"

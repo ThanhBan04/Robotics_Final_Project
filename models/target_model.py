@@ -467,9 +467,9 @@ class TargetModel:
         vel = self._saturate_velocity(np.array([new_vx, new_vy]))
         new_vx, new_vy = vel[0], vel[1]
         
-        # Update position
-        new_x = self.state.x + self.state.vx * dt
-        new_y = self.state.y + self.state.vy * dt
+        # Update position using updated velocity (Semi-implicit Euler, consistent with UAV)
+        new_x = self.state.x + new_vx * dt
+        new_y = self.state.y + new_vy * dt
         
         # Enforce world bounds if configured
         if self.world_bounds is not None:

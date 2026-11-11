@@ -41,7 +41,7 @@ class UnscentedKalmanFilter:
                  dt: float = 0.02,
                  process_noise_q: float = 5.0,
                  measurement_model: str = "range_bearing",
-                 alpha: float = 0.1,
+                 alpha: float = 1.0,
                  beta: float = 2.0,
                  kappa: float = 0.0):
         """

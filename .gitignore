@@ -13,6 +13,13 @@ __pycache__/
 # Logs and temporary files
 *.log
 
+# Office Documents
+*.docx
+
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Local editor settings and ad-hoc simulation runs
+.vscode/
+results/data/scenario_*/run_*/

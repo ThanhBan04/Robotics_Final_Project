@@ -45,20 +45,23 @@ filter:
   ekf: {}
   # UKF-specific
   ukf:
-    alpha: 0.1
+    alpha: 1.0
     beta: 2.0
     kappa: 0.0
 
 pid:
   kp: 2.0                 # Proportional gain
   ki: 0.1                 # Integral gain
-  kd: 1.5                 # Derivative gain
+  kd: 2.8                 # Derivative gain (critically damped)
   desired_distance: 50.0  # Desired following distance (m)
   integral_limit: 50.0    # Anti-windup integral limit
-  derivative_filter: 0.1  # Derivative low-pass filter coefficient
+  derivative_filter: 0.2  # Derivative low-pass filter coefficient
+  min_safety_distance: 20.0  # Minimum safety buffer distance to target (m)
 
+# Lưu ý: Các kịch bản mô phỏng chính thức (1-12) được định nghĩa đầy đủ
+# và kiểm thử chi tiết trong tệp simulation/target_scenario.py
 scenario:
-  name: "baseline"        # Scenario name
+  name: "baseline"        # Scenario name tham chiếu mặc định
   trajectory: "straight"  # straight, circular, sinusoidal, zigzag, waypoint, random
   # Trajectory-specific parameters
   circular_radius: 150.0

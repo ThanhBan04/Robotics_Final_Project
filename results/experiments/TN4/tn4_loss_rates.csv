@@ -1,0 +1,25 @@
+scenario_id,scenario_name,filter_mode,seed,camera_dropout,estimation_loss,lost_target_time,max_estimation_error,max_separation
+1,Baseline,ekf,1,False,False,,4.456091163420435,116.61681121643444
+1,Baseline,ukf,1,False,False,,4.52470063207547,116.01003799089727
+2,Sudden Maneuver,ekf,1,False,False,,4.456091163420378,116.61681121643454
+2,Sudden Maneuver,ukf,1,False,False,,4.524700632075499,116.0100379908973
+3,High Noise,ekf,1,False,False,,8.778189995464206,116.61681121643444
+3,High Noise,ukf,1,False,False,,8.780031714882753,116.01003799089727
+4,Lost Detection,ekf,1,True,False,,8.806532682863875,116.61681121643444
+4,Lost Detection,ukf,1,True,False,,8.808764630480296,116.01003799089727
+5,Normal Tracking,ekf,1,False,False,,5.040705826742369,122.16544615825312
+5,Normal Tracking,ukf,1,False,False,,5.173031839955376,122.10615306066126
+6,Turning Tracking,ekf,1,False,False,,4.456091163420378,116.61681121643454
+6,Turning Tracking,ukf,1,False,False,,4.524700632075443,116.01003799089729
+7,Combined Stress,ekf,1,True,True,20.759999999999646,712.1850212349884,387.3557192423936
+7,Combined Stress,ukf,1,True,True,20.759999999999646,726.7046064790683,388.6437290345972
+8,Interactive Click,ekf,1,False,False,,6.377760117336027,170.61185041753484
+8,Interactive Click,ukf,1,False,False,,6.415899432073271,170.4788122319044
+9,Interactive Waypoint,ekf,1,False,False,,4.44878141134818,121.58334828042892
+9,Interactive Waypoint,ukf,1,False,False,,4.517633942528237,120.78424956987965
+10,Mouse Drag Target,ekf,1,False,False,,5.910799810790302,157.15933266377036
+10,Mouse Drag Target,ukf,1,False,False,,5.884323579405682,156.96699536354896
+11,Keyboard Control,ekf,1,False,False,,4.456091163420378,116.61681121643466
+11,Keyboard Control,ukf,1,False,False,,4.524700632075443,116.01003799089725
+12,Evasive Target,ekf,1,False,False,,7.534863932163942,118.63119464708481
+12,Evasive Target,ukf,1,False,False,,7.470917739189198,118.07794302260417

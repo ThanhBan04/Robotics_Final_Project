@@ -100,6 +100,10 @@ class SimulationEngine:
         self.ukf_step_times: List[float] = []
         self._last_raw_pos: Optional[tuple] = None
         self._last_raw_vel: Optional[tuple] = None
+        self._smoothed_pos: Optional[tuple] = None
+        self._smoothed_vel: Optional[tuple] = None
+        self._filters_initialized_from_measurement = False
+        self.camera_reacquire_with_estimate = True
         
         # Scenario events
         self.noise_schedule: List[dict] = []
@@ -222,6 +226,7 @@ class SimulationEngine:
             measurement_rate=cam_cfg.get('measurement_rate', 50.0),
             random_seed=self.random_seed + 1,
         )
+        self.camera_reacquire_with_estimate = cam_cfg.get('reacquire_with_estimate', True)
         
         # Filters
         filter_cfg = cfg.get('filter', {})
@@ -238,40 +243,33 @@ class SimulationEngine:
             state_dim=4, measurement_dim=2, dt=self.dt,
             process_noise_q=process_noise_q,
             measurement_model=measurement_model,
-            alpha=ukf_cfg.get('alpha', 0.1),
+            # alpha=1 avoids a very large negative central sigma-point weight
+            # for this 4D state when kappa=0.
+            alpha=ukf_cfg.get('alpha', 1.0),
             beta=ukf_cfg.get('beta', 2.0),
             kappa=ukf_cfg.get('kappa', 0.0),
         )
         
-        # Initialize filters with noisy initial estimate
-        rng = np.random.default_rng(self.random_seed + 2)
-        init_noise = rng.normal(0, 10, 4)
-        init_state = np.array([
-            target_cfg.get('initial_x', 300.0),
-            target_cfg.get('initial_y', 400.0),
-            target_cfg.get('initial_vx', 30.0),
-            target_cfg.get('initial_vy', 0.0),
-        ]) + init_noise
-        
-        P0 = np.diag([100, 100, 25, 25]).astype(float)
+        # Do not seed either filter from ground truth.  Both filters are
+        # initialized lazily from the first valid camera measurement in the
+        # simulation loop (velocity starts at zero with high uncertainty).
+        P0 = np.diag([400, 400, 900, 900]).astype(float)
         R = self.camera.get_measurement_noise_covariance()
-        
-        self.ekf.initialize(init_state, P0)
         self.ekf.set_measurement_noise(R)
-        
-        self.ukf.initialize(init_state.copy(), P0.copy())
         self.ukf.set_measurement_noise(R)
+        self._filters_initialized_from_measurement = False
         
         # PID controller
         pid_cfg = cfg.get('pid', {})
         self.pid = PIDController(
             kp=pid_cfg.get('kp', 2.0),
             ki=pid_cfg.get('ki', 0.1),
-            kd=pid_cfg.get('kd', 1.5),
+            kd=pid_cfg.get('kd', 2.8),
             desired_distance=pid_cfg.get('desired_distance', 50.0),
             integral_limit=pid_cfg.get('integral_limit', 50.0),
-            derivative_filter=pid_cfg.get('derivative_filter', 0.1),
+            derivative_filter=pid_cfg.get('derivative_filter', 0.2),
             max_acceleration=uav_cfg.get('max_acceleration', 25.0),
+            min_safety_distance=pid_cfg.get('min_safety_distance', 20.0),
         )
         
         # Reset state
@@ -299,16 +297,11 @@ class SimulationEngine:
         
         # Re-initialize filters
         if self.ekf and self.ukf:
-            rng = np.random.default_rng(self.random_seed + 2)
-            init_noise = rng.normal(0, 10, 4)
-            init_state = self.target_model.initial_state.state_vector() + init_noise
             P0 = np.diag([100, 100, 25, 25]).astype(float)
             R = self.camera.get_measurement_noise_covariance()
-            
-            self.ekf.initialize(init_state, P0)
             self.ekf.set_measurement_noise(R)
-            self.ukf.initialize(init_state.copy(), P0.copy())
             self.ukf.set_measurement_noise(R)
+            self._filters_initialized_from_measurement = False
         
         self.time = 0.0
         self.step_count = 0
@@ -355,19 +348,53 @@ class SimulationEngine:
         
         # 2. Camera measurement
         uav_pose = self.uav_model.get_pose()
-        measurement = self.camera.measure(target_gt, uav_pose, self.time)
+        measurement_pose = dict(uav_pose)
+        # A camera pointed along the UAV velocity can lose a maneuvering
+        # target permanently.  When enabled, use the last filter estimate as
+        # a bounded visual-search heading; this does not reveal ground truth.
+        if self.camera_reacquire_with_estimate and self._filters_initialized_from_measurement:
+            estimate_for_camera = None
+            if self.filter_mode == 'ukf' and self.ukf.initialized:
+                estimate_for_camera = self.ukf.get_estimated_state()
+            elif self.ekf.initialized:
+                estimate_for_camera = self.ekf.get_estimated_state()
+            if estimate_for_camera is not None:
+                dx = estimate_for_camera['x'] - uav_pose['x']
+                dy = estimate_for_camera['y'] - uav_pose['y']
+                if dx * dx + dy * dy > 1e-6:
+                    measurement_pose['heading'] = float(np.arctan2(dy, dx))
+
+        measurement = self.camera.measure(target_gt, measurement_pose, self.time)
         step_data.measurement = measurement
         
         # 3. Filter estimation
         meas_data = measurement.data if measurement.detected else None
+
+        # Initialize filters from the first actual measurement.  This keeps
+        # the experiment honest: the filter does not receive target ground
+        # truth or the target's initial velocity.
+        if not self._filters_initialized_from_measurement and meas_data is not None:
+            r, theta = float(meas_data[0]), float(meas_data[1])
+            bearing = uav_pose['heading'] + theta
+            init_state = np.array([
+                uav_pose['x'] + r * np.cos(bearing),
+                uav_pose['y'] + r * np.sin(bearing),
+                0.0,
+                0.0,
+            ], dtype=float)
+            range_var = max(float(self.camera.noise_range_std) ** 2 * 4.0, 100.0)
+            P0 = np.diag([range_var, range_var, 900.0, 900.0])
+            self.ekf.initialize(init_state, P0)
+            self.ukf.initialize(init_state.copy(), P0.copy())
+            self._filters_initialized_from_measurement = True
         
         ekf_est_dict = None
         ukf_est_dict = None
         raw_est_dict = None
         
-        if self.filter_mode in ('ekf', 'both'):
+        if self.filter_mode in ('ekf', 'both') and self.ekf.initialized:
             t0 = time.perf_counter()
-            ekf_result = self.ekf.step(meas_data, uav_pose, self.dt, self.time)
+            ekf_result = self.ekf.step(meas_data, measurement_pose, self.dt, self.time)
             self.ekf_step_times.append(time.perf_counter() - t0)
             
             ekf_est_dict = self.ekf.get_estimated_state()
@@ -382,9 +409,9 @@ class SimulationEngine:
                 (ekf_est_dict['y'] - target_gt.y)**2
             )
         
-        if self.filter_mode in ('ukf', 'both'):
+        if self.filter_mode in ('ukf', 'both') and self.ukf.initialized:
             t0 = time.perf_counter()
-            ukf_result = self.ukf.step(meas_data, uav_pose, self.dt, self.time)
+            ukf_result = self.ukf.step(meas_data, measurement_pose, self.dt, self.time)
             self.ukf_step_times.append(time.perf_counter() - t0)
             
             ukf_est_dict = self.ukf.get_estimated_state()
@@ -399,13 +426,13 @@ class SimulationEngine:
                 (ukf_est_dict['y'] - target_gt.y)**2
             )
             
-        if self.filter_mode in ('none', 'raw'):
+        if self.filter_mode in ('none', 'raw', 'none_smoothed'):
             # No-filter baseline: raw measurement converted to Cartesian
             if measurement.detected and meas_data is not None:
                 r, theta = meas_data[0], meas_data[1]
-                bearing = uav_pose['heading'] + theta
-                x_meas = uav_pose['x'] + r * np.cos(bearing)
-                y_meas = uav_pose['y'] + r * np.sin(bearing)
+                bearing = measurement_pose['heading'] + theta
+                x_meas = measurement_pose['x'] + r * np.cos(bearing)
+                y_meas = measurement_pose['y'] + r * np.sin(bearing)
                 if self._last_raw_pos is not None:
                     vx_meas = (x_meas - self._last_raw_pos[0]) / max(self.dt, 1e-6)
                     vy_meas = (y_meas - self._last_raw_pos[1]) / max(self.dt, 1e-6)
@@ -413,9 +440,27 @@ class SimulationEngine:
                     vx_meas, vy_meas = 0.0, 0.0
                 self._last_raw_pos = (x_meas, y_meas)
                 self._last_raw_vel = (vx_meas, vy_meas)
+                
+                # Smoothed variant: exponential moving average
+                if self.filter_mode == 'none_smoothed':
+                    if self._smoothed_pos is None:
+                        self._smoothed_pos = (x_meas, y_meas)
+                        self._smoothed_vel = (vx_meas, vy_meas)
+                    else:
+                        sx = 0.3 * x_meas + 0.7 * self._smoothed_pos[0]
+                        sy = 0.3 * y_meas + 0.7 * self._smoothed_pos[1]
+                        svx = 0.2 * vx_meas + 0.8 * self._smoothed_vel[0]
+                        svy = 0.2 * vy_meas + 0.8 * self._smoothed_vel[1]
+                        self._smoothed_pos = (sx, sy)
+                        self._smoothed_vel = (svx, svy)
+                        x_meas, y_meas = sx, sy
+                        vx_meas, vy_meas = svx, svy
             else:
                 # Hold last raw measurement during dropout
-                if self._last_raw_pos is not None:
+                if self.filter_mode == 'none_smoothed' and self._smoothed_pos is not None:
+                    x_meas, y_meas = self._smoothed_pos
+                    vx_meas, vy_meas = self._smoothed_vel
+                elif self._last_raw_pos is not None:
                     x_meas, y_meas = self._last_raw_pos
                     vx_meas, vy_meas = self._last_raw_vel
                 else:
@@ -432,7 +477,7 @@ class SimulationEngine:
         # 4. PID control using active filter's estimate
         if self.filter_mode == 'ukf':
             active_estimate = ukf_est_dict
-        elif self.filter_mode in ('none', 'raw'):
+        elif self.filter_mode in ('none', 'raw', 'none_smoothed'):
             active_estimate = raw_est_dict
         else:
             active_estimate = ekf_est_dict  # Default to EKF
@@ -667,25 +712,54 @@ class SimulationEngine:
             metrics['raw_velocity_rmse'] = np.sqrt(np.mean(np.array(raw_vel_errors)**2))
             metrics['raw_max_position_error'] = np.max(raw_pos_errors)
 
+        # Post-10s position RMSE (after initial transient approach)
+        ekf_pos_p10 = [np.sqrt((s.ekf_estimate['x'] - s.target_gt.x)**2 + (s.ekf_estimate['y'] - s.target_gt.y)**2)
+                       for s in self.history if s.time >= 10.0 and s.ekf_estimate and s.target_gt]
+        ukf_pos_p10 = [np.sqrt((s.ukf_estimate['x'] - s.target_gt.x)**2 + (s.ukf_estimate['y'] - s.target_gt.y)**2)
+                       for s in self.history if s.time >= 10.0 and s.ukf_estimate and s.target_gt]
+        if ekf_pos_p10:
+            metrics['ekf_pos_rmse_post10'] = float(np.sqrt(np.mean(np.array(ekf_pos_p10)**2)))
+        if ukf_pos_p10:
+            metrics['ukf_pos_rmse_post10'] = float(np.sqrt(np.mean(np.array(ukf_pos_p10)**2)))
+
         # Computation time (us)
         if self.ekf_step_times:
             metrics['ekf_mean_step_time_us'] = float(np.mean(self.ekf_step_times) * 1e6)
         if self.ukf_step_times:
             metrics['ukf_mean_step_time_us'] = float(np.mean(self.ukf_step_times) * 1e6)
 
-        # PID acceleration jitter
-        pid_cmd_norms = [np.linalg.norm(step.pid_command) for step in self.history if step.pid_command is not None]
-        if pid_cmd_norms:
-            metrics['pid_acceleration_jitter'] = float(np.std(pid_cmd_norms))
+        # PID acceleration metrics: step-to-step jerk/jitter and saturation ratio
+        pid_cmds = [np.array(step.pid_command) for step in self.history if step.pid_command is not None]
+        if len(pid_cmds) > 1:
+            step_deltas = [np.linalg.norm(pid_cmds[i] - pid_cmds[i-1]) for i in range(1, len(pid_cmds))]
+            metrics['pid_step_jitter'] = float(np.mean(step_deltas))
+            metrics['pid_acceleration_jitter'] = float(np.mean(step_deltas))  # Mean step-to-step jerk
+            max_a = self.uav_model.max_acceleration if self.uav_model else 25.0
+            sat_count = sum(1 for c in pid_cmds if np.linalg.norm(c) >= 0.99 * max_a)
+            metrics['pid_saturation_ratio'] = float(sat_count / len(pid_cmds) * 100.0)
+        else:
+            metrics['pid_step_jitter'] = 0.0
+            metrics['pid_acceleration_jitter'] = 0.0
+            metrics['pid_saturation_ratio'] = 0.0
         
         # Tracking metrics
         if tracking_errors:
             metrics['tracking_rmse'] = np.sqrt(np.mean(np.array(tracking_errors)**2))
-            metrics['mean_tracking_distance'] = np.mean(tracking_distances)
-            metrics['max_tracking_distance'] = np.max(tracking_distances)
-            metrics['min_tracking_distance'] = np.min(tracking_distances)
-            metrics['mean_tracking_error'] = np.mean(tracking_errors)
-            metrics['max_tracking_error'] = np.max(tracking_errors)
+            metrics['mean_tracking_distance'] = float(np.mean(tracking_distances))
+            metrics['max_tracking_distance'] = float(np.max(tracking_distances))
+            metrics['max_separation'] = float(np.max(tracking_distances))  # Explicit key for TN0/TN3
+            metrics['min_tracking_distance'] = float(np.min(tracking_distances))
+            metrics['mean_tracking_error'] = float(np.mean(tracking_errors))
+            metrics['max_tracking_error'] = float(np.max(tracking_errors))
+        else:
+            metrics['max_separation'] = 0.0
+
+        # Post-10s metrics (steady-state tracking phase after initial approach)
+        post10_tracking_errors = [abs(step.tracking_distance - desired_dist) for step in self.history if step.time >= 10.0]
+        if post10_tracking_errors:
+            metrics['tracking_rmse_post10'] = float(np.sqrt(np.mean(np.array(post10_tracking_errors)**2)))
+        else:
+            metrics['tracking_rmse_post10'] = metrics.get('tracking_rmse', 0.0)
         
         # Settling time (time after which error remains within 10% of desired distance)
         threshold = desired_dist * 0.1
@@ -698,9 +772,10 @@ class SimulationEngine:
                     break
         metrics['settling_time'] = settling_time
         
-        # Target loss criteria (TN4)
+        # Target loss criteria (TN4): Separated into camera dropout vs true estimation divergence
         has_lost = False
         lost_time = None
+        camera_dropout_detected = False
         consecutive_high_error = 0
         consecutive_no_meas = 0
         dt = self.dt
@@ -724,13 +799,18 @@ class SimulationEngine:
                 consecutive_no_meas += 1
             else:
                 consecutive_no_meas = 0
+
+            if consecutive_no_meas > steps_3s:
+                camera_dropout_detected = True
                 
-            if (consecutive_high_error > steps_2s or consecutive_no_meas > steps_3s) and not has_lost:
+            # True lost target is based on filter estimation divergence (>50m continuously for >2s)
+            if consecutive_high_error > steps_2s and not has_lost:
                 has_lost = True
                 lost_time = float(step.time)
                 
         metrics['has_lost_target'] = bool(has_lost)
         metrics['lost_target_time'] = lost_time
+        metrics['camera_dropout_detected'] = bool(camera_dropout_detected)
 
         return metrics
 
