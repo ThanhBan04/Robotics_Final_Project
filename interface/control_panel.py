@@ -351,3 +351,14 @@ class ControlPanel:
             'dropout_duration': self.sliders['dropout_dur'].value,
             'delay_seconds': self.sliders['delay_sec'].value,
         }
+
+    def set_scenario_defaults(self, scenario_config: Dict[str, Any]):
+        """Initialize scenario-dependent sliders before a new run."""
+        target_cfg = scenario_config.get('target', {})
+        camera_cfg = scenario_config.get('camera', {})
+        target_speed = float(target_cfg.get('max_speed', 30.0))
+        noise_level = float(camera_cfg.get('noise_range_std', 2.0))
+        speed_slider = self.sliders['target_speed']
+        noise_slider = self.sliders['noise_level']
+        speed_slider.value = max(speed_slider.min_val, min(speed_slider.max_val, target_speed))
+        noise_slider.value = max(noise_slider.min_val, min(noise_slider.max_val, noise_level))

@@ -165,6 +165,9 @@ class Dashboard:
 
     def _on_start(self):
         """Start/restart simulation."""
+        selected_scenario_id = self.control_panel.dropdowns['scenario'].selected + 1
+        selected_scenario = get_scenario_config(selected_scenario_id)
+        self.control_panel.set_scenario_defaults(selected_scenario)
         panel_state = self.control_panel.get_state()
         scfg, is_interactive = self._build_scenario_config(panel_state)
 

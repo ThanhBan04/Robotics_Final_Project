@@ -285,7 +285,9 @@ def run_experiment_tn3(seeds=range(1, 11), output_dir="results/experiments/TN3")
                         'pos_rmse': pos_rmse,
                         'tracking_rmse': m.get('tracking_rmse', 0.0),
                         'max_separation': m.get('max_separation', 0.0),
-                        'has_lost': m.get('has_lost_target', False)
+                        'has_lost': m.get('has_lost_target', False),
+                        'had_estimation_divergence': m.get('had_estimation_divergence', False),
+                        'recovery_time': m.get('recovery_time')
                     })
 
     df = pd.DataFrame(records)
@@ -660,6 +662,8 @@ def run_experiment_tn4(seeds=range(1, 21), output_dir="results/experiments/TN4")
                     'seed': seed,
                     'camera_dropout': bool(metrics.get('camera_dropout_detected', False)),
                     'estimation_loss': bool(metrics.get('has_lost_target', False)),
+                    'had_estimation_divergence': bool(metrics.get('had_estimation_divergence', False)),
+                    'recovery_time': metrics.get('recovery_time'),
                     'lost_target_time': metrics.get('lost_target_time'),
                     'max_estimation_error': metrics.get(f'{filter_mode}_max_position_error', 0.0),
                     'max_separation': metrics.get('max_separation', 0.0),
@@ -669,6 +673,7 @@ def run_experiment_tn4(seeds=range(1, 21), output_dir="results/experiments/TN4")
     summary = df.groupby(['scenario_id', 'scenario_name', 'filter_mode']).agg(
         camera_dropout_rate=('camera_dropout', lambda x: float(np.mean(x) * 100.0)),
         estimation_loss_rate=('estimation_loss', lambda x: float(np.mean(x) * 100.0)),
+        divergence_rate=('had_estimation_divergence', lambda x: float(np.mean(x) * 100.0)),
         max_estimation_error_mean=('max_estimation_error', 'mean'),
         max_separation_mean=('max_separation', 'mean'),
     ).reset_index()

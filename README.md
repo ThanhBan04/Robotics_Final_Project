@@ -277,19 +277,19 @@ Mỗi lượt chạy lưu vào `results/data/`:
 - Mỗi measurement lưu `sensor_pose`, tức tư thế camera tại đúng thời điểm chụp. Khi measurement bị delay, EKF/UKF và phép đổi range-bearing sang tọa độ dùng lại tư thế này.
 - EKF/UKF được khởi tạo từ measurement đầu tiên, với vận tốc ban đầu bằng 0 và hiệp phương sai P0 cấu hình được trong `filter.initial_position_var` và `filter.initial_velocity_var`.
 - UKF dùng `alpha=1`, `beta=2`, `kappa=0`.
-- Các scenario được giữ trong giới hạn bản đồ; vận tốc ban đầu của một số scenario được giới hạn để tránh tạo quỹ đạo không khả thi. Scenario 11 có lệnh tăng tốc lên 40 m/s và scenario 12 dùng quỹ đạo zigzag đã cấu hình.
+- Để tránh mục tiêu chạm biên trong thời gian mô phỏng, tốc độ ban đầu của các scenario được giảm từ khoảng 30–40 m/s xuống 25 m/s và điểm xuất phát được dời vào vùng an toàn hơn. Scenario 11 tăng tốc lên 40 m/s thay vì 60 m/s; scenario 12 dùng quỹ đạo zigzag và đã bỏ các lệnh rẽ 120°, −135°, 90°.
 - Khi chạy batch/headless, scenario 8–12 sử dụng quỹ đạo định sẵn để bảo đảm tái lập; khi chạy GUI, chúng vẫn nhận điều khiển tương tác.
 
 ## Kiểm chứng sau các sửa lỗi
 
 - Bộ hồi quy hiện có **77 test đạt**.
 - TN0: 480 dòng dữ liệu = 12 scenario × 20 seed × 2 filter; có `pos_rmse_post10`, `tracking_rmse_post10`, mean/std/median.
-- TN3: 480 dòng = 6 thời lượng dropout × 2 kiểu chuyển động × 20 seed × 2 filter.
-- TN4: 480 dòng = 12 scenario × 20 seed × 2 filter; tách riêng camera dropout và estimation loss.
+- TN3: 480 dòng = 6 thời lượng dropout × 2 kiểu chuyển động × 20 seed × 2 filter; CSV có thêm `had_estimation_divergence` và `recovery_time`.
+- TN4: 480 dòng = 12 scenario × 20 seed × 2 filter; tách riêng camera dropout, divergence tạm thời và estimation loss không hồi phục.
 - TN5: 280 dòng, gồm sweep khoảng cách, tần số đo và P0; TN6/TN7 có CSV thống kê NEES, NIS và thời gian mỗi bước.
 - So với lỗi trước đây, TN1 chế độ `none` hiện giữ sai số vị trí khoảng 2–3 m ở baseline thay vì hàng trăm mét và đạt tỷ lệ detection trên 95% trong test hồi quy.
 - Với scenario 7, sau khi dùng đúng tư thế camera tại thời điểm chụp và xử lý measurement delay, estimation loss trong TN4 giảm còn 0% với EKF và 5% với UKF trên 20 seed.
-- Với TN3 target đang rẽ, chế độ quét giúp tỷ lệ estimation loss là 0% ở dropout 3 s và 5 s cho cả hai filter; ở dropout 8 s là 0% trong bộ chạy hiện tại. Dropout 10 s vẫn là trường hợp khó và được giữ lại để thảo luận hạn chế.
+- Trong TN3/TN4, `estimation_loss`/`has_lost_target` chỉ tính trường hợp bộ lọc không tìm lại được mục tiêu đến cuối lần chạy. `divergence_rate` lại tính mọi lần sai số vị trí vượt 50 m liên tục quá 2 s, kể cả khi sau đó đã hồi phục; `recovery_time` ghi thời điểm hồi phục đầu tiên. Với mục tiêu đang rẽ và mất tín hiệu từ 5 s trở lên, bộ lọc vẫn phân kỳ tạm thời rồi tìm lại nhờ chế độ quét. Theo CSV TN3 mới, ở chuyển động rẽ: dropout 5 s có `divergence_rate` 100% và position RMSE trung bình 54,49 m (EKF), 42,03 m (UKF), hồi phục trung bình tại 17,60 s và 16,54 s; dropout 8 s là 100%, 96,54 m và 122,39 m, hồi phục tại 20,71 s và 22,03 s; dropout 10 s là 100%, 145,77 m và 156,68 m, hồi phục tại 23,76 s và 24,76 s. Trong các dòng chuyển động thẳng, `divergence_rate` vẫn 0% ở cả sáu thời lượng. Theo TN4, scenario 7 có `divergence_rate` 5% cho cả EKF/UKF; `estimation_loss_rate` là 0% với EKF và 5% với UKF, còn `max_estimation_error_mean` là 36,75 m và 40,10 m. Các số liệu này nằm trong `results/experiments/TN3/tn3_summary.csv` và `results/experiments/TN4/tn4_summary.csv`.
 
 ---
 
