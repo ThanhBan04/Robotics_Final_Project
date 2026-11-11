@@ -17,6 +17,7 @@ import time
 import json
 import os
 import csv
+import copy
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 
@@ -107,7 +108,7 @@ class SimulationEngine:
         Args:
             scenario_config: Scenario-specific configuration overrides
         """
-        cfg = self.config.copy()
+        cfg = copy.deepcopy(self.config)
         if scenario_config:
             # Merge scenario config
             for key, val in scenario_config.items():
@@ -149,6 +150,7 @@ class SimulationEngine:
             zigzag_period=target_cfg.get('zigzag_period', 5.0),
             waypoints=target_cfg.get('waypoints', []),
             maneuvers=maneuvers,
+            world_bounds=tuple(cfg.get('simulation', {}).get('world_bounds', (1200, 800))),
         )
         
         # UAV model
@@ -576,13 +578,15 @@ class SimulationEngine:
             metrics['mean_tracking_error'] = np.mean(tracking_errors)
             metrics['max_tracking_error'] = np.max(tracking_errors)
         
-        # Settling time (time to get within 10% of desired distance)
+        # Settling time (time after which error remains within 10% of desired distance)
         threshold = desired_dist * 0.1
         settling_time = None
-        for step in self.history:
-            if abs(step.tracking_distance - desired_dist) < threshold:
-                settling_time = step.time
-                break
+        if self.history and abs(self.history[-1].tracking_distance - desired_dist) < threshold:
+            settling_time = self.history[0].time
+            for i in range(len(self.history) - 1, -1, -1):
+                if abs(self.history[i].tracking_distance - desired_dist) >= threshold:
+                    settling_time = self.history[i + 1].time if i + 1 < len(self.history) else self.history[i].time
+                    break
         metrics['settling_time'] = settling_time
         
         return metrics

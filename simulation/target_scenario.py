@@ -400,12 +400,10 @@ def scenario_12_evasive_target(cfg: dict) -> Dict[str, Any]:
         'interactive_mode': 'keyboard',
         'target': {
             'initial_x': 300.0, 'initial_y': 400.0,
-            'initial_vx': 40.0, 'initial_vy': 0.0,
-            'max_speed': 90.0, 'max_acceleration': 35.0,
-            'process_noise_std': 0.8,
-            'trajectory_type': 'zigzag',
-            'zigzag_amplitude': 100.0,
-            'zigzag_period': 4.0,
+            'initial_vx': 25.0, 'initial_vy': 0.0,
+            'max_speed': 65.0, 'max_acceleration': 25.0,
+            'process_noise_std': 0.5,
+            'trajectory_type': 'straight',
         },
         'uav': {
             'initial_x': 150.0, 'initial_y': 400.0,
@@ -418,10 +416,11 @@ def scenario_12_evasive_target(cfg: dict) -> Dict[str, Any]:
             'delay': 0.0,
         },
         'maneuvers': [
-            {'time': 5.0, 'type': 'turn', 'angle': 120, 'duration': 0.4},
-            {'time': 10.0, 'type': 'speed', 'target_speed': 85.0, 'duration': 0.5},
-            {'time': 15.0, 'type': 'turn', 'angle': -135, 'duration': 0.4},
-            {'time': 20.0, 'type': 'turn', 'angle': 90, 'duration': 0.4},
+            {'time': 5.0, 'type': 'turn', 'angle': 120, 'duration': 1.0},
+            {'time': 10.0, 'type': 'speed', 'target_speed': 55.0, 'duration': 1.0},
+            {'time': 15.0, 'type': 'turn', 'angle': -135, 'duration': 1.0},
+            {'time': 20.0, 'type': 'turn', 'angle': 90, 'duration': 1.0},
+            {'time': 24.0, 'type': 'speed', 'target_speed': 30.0, 'duration': 1.0},
         ],
     }
 

@@ -168,8 +168,8 @@ class UnscentedKalmanFilter:
         sigma_points[0] = x
         
         for i in range(n):
-            sigma_points[i + 1] = x + sqrt_P[i]
-            sigma_points[i + 1 + n] = x - sqrt_P[i]
+            sigma_points[i + 1] = x + sqrt_P[:, i]
+            sigma_points[i + 1 + n] = x - sqrt_P[:, i]
         
         return sigma_points
 

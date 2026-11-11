@@ -81,5 +81,26 @@ class TestUKF(unittest.TestCase):
         self.assertAlmostEqual(est['vy'], 4.0)
 
 
+    def test_sigma_points_covariance_reconstruction(self):
+        """Test that sigma points reconstruct the exact prior covariance P."""
+        ukf = UnscentedKalmanFilter()
+        x0 = np.array([10.0, 20.0, 5.0, -3.0])
+        P0 = np.array([
+            [25.0, 5.0, 1.0, 0.5],
+            [5.0, 30.0, 2.0, 1.0],
+            [1.0, 2.0, 10.0, 0.0],
+            [0.5, 1.0, 0.0, 8.0]
+        ])
+        sigmas = ukf._generate_sigma_points(x0, P0)
+        
+        # Reconstruct covariance from sigma points
+        P_recon = np.zeros((4, 4))
+        for i in range(ukf.n_sigma):
+            diff = sigmas[i] - x0
+            P_recon += ukf.Wc[i] * np.outer(diff, diff)
+            
+        np.testing.assert_array_almost_equal(P_recon, P0, decimal=5)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -53,13 +53,15 @@ class TrackingEvaluator:
         metrics['min_tracking_distance'] = float(np.min(arr_dist))
         metrics['max_separation'] = float(np.max(arr_dist))
 
-        # Settling time: first time tracking error < 10% of desired_distance
+        # Settling time: time after which tracking error remains within 10% of desired_distance
         threshold = self.desired_distance * 0.1
         settling = None
-        for i, e in enumerate(self.tracking_errors):
-            if e < threshold:
-                settling = self.timestamps[i]
-                break
+        if len(self.tracking_errors) > 0 and self.tracking_errors[-1] < threshold:
+            settling = self.timestamps[0]
+            for i in range(len(self.tracking_errors) - 1, -1, -1):
+                if self.tracking_errors[i] >= threshold:
+                    settling = self.timestamps[i + 1] if i + 1 < len(self.timestamps) else self.timestamps[i]
+                    break
         metrics['settling_time'] = settling
 
         # Tracking success rate: fraction of time within threshold

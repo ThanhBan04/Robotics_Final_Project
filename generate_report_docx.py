@@ -5,6 +5,7 @@ cho môn học Kỹ thuật Robot - Đề tài: 2D UAV Target Tracking (EKF, UKF
 """
 
 import os
+import glob
 import pandas as pd
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor, Cm
@@ -506,13 +507,15 @@ def create_report():
     add_h1("CHƯƠNG 4. KẾT QUẢ THỰC NGHIỆM VÀ PHÂN TÍCH ĐÁNH GIÁ")
 
     add_h2("4.1. Bảng số liệu thực nghiệm toàn bộ 12 Kịch bản (Dữ liệu mô phỏng thực)")
+    batch_dirs = sorted(glob.glob("results/data/batch_*"))
+    summary_path = os.path.join(batch_dirs[-1], "summary.csv") if batch_dirs else "results/data/summary.csv"
+    
     add_p(
-        "Bảng số liệu dưới đây được trích xuất trực tiếp từ quá trình chạy nghiệm thu tự động trên toàn bộ 12 kịch bản (Seed = 42, "
-        "mỗi kịch bản mô phỏng 30 giây với 600 bước lặp, tổng hợp tại file `results/data/batch_20261110_114446/summary.csv`):"
+        f"Bảng số liệu dưới đây được trích xuất trực tiếp từ quá trình chạy nghiệm thu tự động trên toàn bộ 12 kịch bản (Seed = 42, "
+        f"mỗi kịch bản mô phỏng 30 giây với 600 bước lặp, trích xuất từ tập dữ liệu mới nhất tại `{summary_path}` sau khi đã chuẩn hóa giải thuật):"
     )
 
     # Đọc dữ liệu summary.csv
-    summary_path = "results/data/batch_20261110_114446/summary.csv"
     if os.path.exists(summary_path):
         df_sum = pd.read_csv(summary_path)
         
@@ -701,12 +704,48 @@ def create_report():
     add_p(
         "Nhằm tuân thủ nguyên tắc liêm chính học thuật và đảm bảo khả năng tái lập kết quả (Reproducibility) theo đúng hướng dẫn học phần:\n"
         "• Kho lưu trữ mã nguồn trực tuyến (GitHub): https://github.com/ThanhBan04/Robotics_Final_Project\n"
-        "• Toàn bộ 65 bài kiểm thử đơn vị tự động (Unit Tests) đã được thực thi và xác nhận PASS 100% qua lệnh `pytest tests/`.\n"
+        "• Toàn bộ 69 bài kiểm thử đơn vị tự động (Unit Tests) đã được thực thi và xác nhận PASS 100% qua lệnh `pytest tests/` (bao gồm kiểm tra tái tạo hiệp phương sai sigma points và kiểm tra cơ chế rẽ 90 độ).\n"
+        "• Giấy phép mã nguồn: MIT License (file LICENSE tại thư mục gốc).\n"
         "• Hướng dẫn chạy nhanh một click thông qua các file batch script tại thư mục gốc:\n"
         "   + Chạy giao diện tương tác Pygame: click `run.bat`\n"
         "   + Chạy giao diện Tkinter & Batch Runner: click `run_batch.bat`\n"
         "   + Chạy tự động xuất số liệu Headless: click `run_headless.bat`"
     )
+
+    add_h2("Bảng Khai báo Đóng góp và Sử dụng Công cụ AI (Academic Integrity & AI Disclosure)")
+    add_p(
+        "Tuân thủ quy định tại mục 7 và mục 9 của tài liệu 'Hướng dẫn tìm kiếm demo và mã nguồn tham khảo' thuộc học phần Kỹ thuật Robot, "
+        "bảng dưới đây phân định rạch ròi giữa phần tham khảo, phần công cụ AI hỗ trợ, và phần sinh viên tự thực hiện:"
+    )
+
+    ai_table_data = [
+        ("Nội dung kỹ thuật", "Nguồn gốc / Công cụ", "Vai trò & Mức độ can thiệp", "Phần sinh viên tự kiểm tra và chịu trách nhiệm"),
+        ("Mô hình động học UAV & Target", "Tự xây dựng (kinematics)", "Sinh viên tự lập công thức vi phân và rời rạc hóa", "Kiểm tra giới hạn bão hòa vận tốc, gia tốc và chặn biên map"),
+        ("Bộ lọc EKF & Đạo hàm Jacobian", "Tự cài đặt thuần NumPy", "Lập đạo hàm giải tích hàm đo cực r-theta", "Kiểm thử ma trận H, dạng Joseph bảo toàn tính xác định dương"),
+        ("Bộ lọc UKF & Cholesky", "Tự cài đặt thuần NumPy + AI Review", "Claude & Antigravity hỗ trợ rà soát lấy cột L[:, i]", "Độc lập viết unit test kiểm tra tái tạo hiệp phương sai P"),
+        ("Bộ điều khiển bám PID 2D", "Lý thuyết điều khiển tự động", "Sinh viên thiết kế bám theo Desired Point 50m", "Tối ưu hóa tham số Kp, Ki, Kd chống vọt lố và bão hòa"),
+        ("12 Kịch bản mô phỏng", "Tự thiết kế theo đề bài", "Lập trình lịch trình rẽ, nhiễu, mất dấu, né tránh", "Chạy thực nghiệm kiểm chứng qua 600 chu kỳ/kịch bản"),
+        ("Vẽ 72 biểu đồ trực quan hóa", "Matplotlib script", "AI hỗ trợ dựng khung script plot tự động", "Sinh viên kiểm tra tính trung thực của dữ liệu và nhãn trục"),
+        ("Bộ 69 Unit Tests", "Pytest framework", "Tự xây dựng bao quát 7 module lõi", "Toàn bộ bài test đạt PASS 100% trên môi trường thực")
+    ]
+
+    tab_ai = doc.add_table(rows=len(ai_table_data), cols=4)
+    tab_ai.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for ci in range(4):
+        tab_ai.rows[0].cells[ci].paragraphs[0].add_run(ai_table_data[0][ci]).bold = True
+        set_cell_background(tab_ai.rows[0].cells[ci], "003366")
+        tab_ai.rows[0].cells[ci].paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+
+    for ri in range(1, len(ai_table_data)):
+        row = tab_ai.rows[ri]
+        for ci in range(4):
+            p_cell = row.cells[ci].paragraphs[0]
+            r_run = p_cell.add_run(ai_table_data[ri][ci])
+            r_run.font.size = Pt(10)
+            if ci == 0:
+                r_run.bold = True
+            if ri % 2 == 1:
+                set_cell_background(row.cells[ci], "F9F9F9")
 
     output_path = "Bao_Cao_Cuoi_Ky_Ky_Thuat_Robot.docx"
     doc.save(output_path)

@@ -1,0 +1,61 @@
+{
+  "ekf_position_rmse": 5.561882787481576,
+  "ekf_velocity_rmse": 7.635025461370608,
+  "ekf_max_position_error": 32.72946999037745,
+  "ukf_position_rmse": 5.5619078057076425,
+  "ukf_velocity_rmse": 7.636283560434059,
+  "ukf_max_position_error": 32.730513149462936,
+  "tracking_rmse": 42.74366857408957,
+  "mean_tracking_distance": 67.24641424607319,
+  "max_tracking_distance": 174.2607824339036,
+  "min_tracking_distance": 9.348552143927233,
+  "mean_tracking_error": 26.287175920113,
+  "max_tracking_error": 124.26078243390359,
+  "settling_time": 23.039999999999598,
+  "ekf_position_max": 32.72946999037745,
+  "ekf_position_mean": 2.203845268697546,
+  "ekf_x_rmse": 4.30275709616321,
+  "ekf_y_rmse": 3.524318588479334,
+  "ukf_position_max": 32.730513149462936,
+  "ukf_position_mean": 2.20373521775682,
+  "ukf_x_rmse": 4.302880000116513,
+  "ukf_y_rmse": 3.5242080165320715,
+  "dropout_recovery": {
+    "periods": [
+      {
+        "start_idx": 493,
+        "end_idx": 566,
+        "duration_steps": 73,
+        "ekf_error_before": 2.9980340897750772,
+        "ekf_error_during": 15.70447668939119,
+        "ekf_error_after": 1.150372694166041,
+        "ukf_error_before": 2.997852042364089,
+        "ukf_error_during": 15.704509938227094,
+        "ukf_error_after": 1.1472721432971098
+      },
+      {
+        "start_idx": 871,
+        "end_idx": 938,
+        "duration_steps": 67,
+        "ekf_error_before": 1.947389009441338,
+        "ekf_error_during": 15.356870506306274,
+        "ekf_error_after": 0.8557688507503686,
+        "ukf_error_before": 1.947134671596281,
+        "ukf_error_during": 15.357555052504782,
+        "ukf_error_after": 0.8547812555178244
+      }
+    ]
+  },
+  "max_separation": 174.2607824339036,
+  "tracking_success_rate": 0.3944037308461026,
+  "mean_uav_speed": 41.928441308226866,
+  "max_uav_speed": 96.83165477058729,
+  "mean_target_speed": 34.881191663386836,
+  "max_target_speed": 35.085419719667954,
+  "scenario_id": 6,
+  "scenario_name": "Turning Tracking",
+  "filter_mode": "both",
+  "seed": 42,
+  "duration": 30.01999999999945,
+  "steps": 1501
+}

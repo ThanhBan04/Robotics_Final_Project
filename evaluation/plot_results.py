@@ -122,7 +122,7 @@ def plot_simulation_run(run_dir: str, save_dir: str = None):
     
     ax.plot(df['time'], df['tracking_distance'], color='blue', label='Actual Distance', linewidth=1.8)
     ax.axhline(desired_dist, color='red', linestyle='--', label=f'Desired Distance ({desired_dist:.0f} m)', linewidth=1.5)
-    ax.fill_between(df['time'], desired_dist * 0.85, desired_dist * 1.15, color='green', alpha=0.15, label='Success Zone (±15%)')
+    ax.fill_between(df['time'], desired_dist * 0.90, desired_dist * 1.10, color='green', alpha=0.15, label='Success Zone (±10%)')
     
     settling_time = metrics.get('settling_time', None)
     if settling_time and settling_time > 0:
@@ -346,7 +346,7 @@ def plot_batch_summary(summary_csv_path: str, save_dir: str = None):
                      
     bars2 = ax2.bar(x, success_vals, color='#43a047', width=0.55, alpha=0.85)
     ax2.set_ylabel('Success Rate (%)', fontsize=11, fontweight='bold')
-    ax2.set_title('Tracking Success Rate in Acceptable Tolerance Band (±15%)', fontsize=13, fontweight='bold')
+    ax2.set_title('Tracking Success Rate in Acceptable Tolerance Band (±10%)', fontsize=13, fontweight='bold')
     ax2.set_xticks(x)
     ax2.set_xticklabels(labels, rotation=25, ha='right', fontsize=9)
     ax2.grid(True, linestyle='--', alpha=0.5, axis='y')

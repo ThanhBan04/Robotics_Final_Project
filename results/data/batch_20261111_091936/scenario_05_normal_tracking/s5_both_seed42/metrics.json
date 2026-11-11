@@ -1,0 +1,83 @@
+{
+  "ekf_position_rmse": 8.172993410885896,
+  "ekf_velocity_rmse": 11.486221370611975,
+  "ekf_max_position_error": 52.97782920921466,
+  "ukf_position_rmse": 8.17167303809447,
+  "ukf_velocity_rmse": 11.484055379466074,
+  "ukf_max_position_error": 52.981214248630735,
+  "tracking_rmse": 108.61240982515244,
+  "mean_tracking_distance": 110.72058683316206,
+  "max_tracking_distance": 364.2036615890417,
+  "min_tracking_distance": 6.888613159257348,
+  "mean_tracking_error": 64.87140334371111,
+  "max_tracking_error": 314.2036615890417,
+  "settling_time": null,
+  "ekf_position_max": 52.97782920921466,
+  "ekf_position_mean": 4.495672975938048,
+  "ekf_x_rmse": 1.697201034875144,
+  "ekf_y_rmse": 7.994831451731987,
+  "ukf_position_max": 52.981214248630735,
+  "ukf_position_mean": 4.4933576497306245,
+  "ukf_x_rmse": 1.682349869245388,
+  "ukf_y_rmse": 7.9966204836149455,
+  "dropout_recovery": {
+    "periods": [
+      {
+        "start_idx": 359,
+        "end_idx": 523,
+        "duration_steps": 164,
+        "ekf_error_before": 1.6118192338689465,
+        "ekf_error_during": 7.263403870276134,
+        "ekf_error_after": 1.472896116679126,
+        "ukf_error_before": 1.6105295087131442,
+        "ukf_error_during": 7.26477118430191,
+        "ukf_error_after": 1.4642999697775603
+      },
+      {
+        "start_idx": 702,
+        "end_idx": 810,
+        "duration_steps": 108,
+        "ekf_error_before": 1.817113538602558,
+        "ekf_error_during": 21.935687435936597,
+        "ekf_error_after": 3.0951168583920814,
+        "ukf_error_before": 1.8147067972185595,
+        "ukf_error_during": 21.93675262607681,
+        "ukf_error_after": 3.076062984024546
+      },
+      {
+        "start_idx": 1014,
+        "end_idx": 1112,
+        "duration_steps": 98,
+        "ekf_error_before": 1.982169541139212,
+        "ekf_error_during": 5.200472827049481,
+        "ekf_error_after": 1.2028131920238356,
+        "ukf_error_before": 1.9796994214933148,
+        "ukf_error_during": 5.196903163634765,
+        "ukf_error_after": 1.1984078061138081
+      },
+      {
+        "start_idx": 1283,
+        "end_idx": 1307,
+        "duration_steps": 24,
+        "ekf_error_before": 1.699168351386747,
+        "ekf_error_during": 3.7852084965427157,
+        "ekf_error_after": 1.535203102402333,
+        "ukf_error_before": 1.6987900178213806,
+        "ukf_error_during": 3.7869978780640756,
+        "ukf_error_after": 1.5365895277032524
+      }
+    ]
+  },
+  "max_separation": 364.2036615890417,
+  "tracking_success_rate": 0.13191205862758162,
+  "mean_uav_speed": 50.86397302310106,
+  "max_uav_speed": 100.00000000000003,
+  "mean_target_speed": 33.44970914338967,
+  "max_target_speed": 49.67304373168161,
+  "scenario_id": 5,
+  "scenario_name": "Normal Tracking",
+  "filter_mode": "both",
+  "seed": 42,
+  "duration": 30.01999999999945,
+  "steps": 1501
+}

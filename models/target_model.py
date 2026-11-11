@@ -112,6 +112,8 @@ class TargetModel:
         
         # Maneuver scheduling (for scenario testing)
         self.maneuvers: List[dict] = kwargs.get('maneuvers', [])
+        self.world_bounds = kwargs.get('world_bounds', None)
+        self._maneuver_states: Dict[int, dict] = {}
         
         # Initialize circular trajectory center
         if self.trajectory_type == "circular" and self.circular_center is None:
@@ -127,6 +129,7 @@ class TargetModel:
         self.last_turn_time = 0.0
         self.target_position = None
         self.command_velocity = None
+        self._maneuver_states = {}
 
     def get_state_transition_matrix(self, dt: float) -> np.ndarray:
         """
@@ -340,31 +343,83 @@ class TargetModel:
 
     def _apply_maneuvers(self, t: float, dt: float, acc: np.ndarray) -> np.ndarray:
         """Apply scheduled maneuvers (sudden turns, speed changes)."""
-        for maneuver in self.maneuvers:
+        for idx, maneuver in enumerate(self.maneuvers):
             m_time = maneuver.get('time', -1)
-            m_duration = maneuver.get('duration', dt * 2)
-            if m_time <= t < m_time + m_duration:
-                m_type = maneuver.get('type', 'turn')
-                if m_type == 'turn':
-                    angle_deg = maneuver.get('angle', 90)
-                    angle_rad = np.radians(angle_deg)
+            m_type = maneuver.get('type')
+            
+            # Check for unknown maneuver type
+            if m_type not in ('turn', 'speed', 'speed_change'):
+                raise ValueError(f"Unknown maneuver type: '{m_type}' in maneuver {maneuver}")
+                
+            if t < m_time:
+                continue
+                
+            state = self._maneuver_states.setdefault(idx, {'started': False, 'completed': False})
+            
+            if m_type == 'turn':
+                if not state['started']:
+                    # Latch target heading once when maneuver starts
                     vel = self.state.velocity()
                     speed = self.state.speed()
                     if speed > 1e-3:
                         current_heading = np.arctan2(vel[1], vel[0])
-                        new_heading = current_heading + angle_rad
-                        desired_vel = speed * np.array([np.cos(new_heading), np.sin(new_heading)])
-                        vel_err = desired_vel - vel
-                        turn_acc = vel_err / max(dt, 1e-6) * 0.8
-                        return turn_acc
-                elif m_type == 'speed_change':
-                    factor = maneuver.get('factor', 1.5)
+                    else:
+                        current_heading = 0.0
+                    angle_deg = maneuver.get('angle', 90)
+                    target_heading = current_heading + np.radians(angle_deg)
+                    target_heading = (target_heading + np.pi) % (2 * np.pi) - np.pi
+                    state['started'] = True
+                    state['target_heading'] = target_heading
+                    state['speed'] = max(speed, 5.0)
+                
+                if not state['completed']:
                     vel = self.state.velocity()
-                    speed = self.state.speed()
-                    if speed > 1e-3:
-                        desired_vel = vel * factor
-                        vel_err = desired_vel - vel
-                        return vel_err / max(dt, 1e-6) * 0.5
+                    speed = state['speed']
+                    current_heading = np.arctan2(vel[1], vel[0]) if np.linalg.norm(vel) > 1e-3 else state['target_heading']
+                    heading_err = (state['target_heading'] - current_heading + np.pi) % (2 * np.pi) - np.pi
+                    
+                    max_omega = self.max_acceleration / max(speed, 1.0)
+                    max_dpsi = max_omega * dt
+                    
+                    if abs(heading_err) <= max_dpsi:
+                        new_heading = state['target_heading']
+                        state['completed'] = True
+                    else:
+                        new_heading = current_heading + np.sign(heading_err) * max_dpsi
+                        
+                    desired_vel = speed * np.array([np.cos(new_heading), np.sin(new_heading)])
+                    turn_acc = (desired_vel - vel) / max(dt, 1e-6)
+                    return turn_acc
+
+            elif m_type in ('speed', 'speed_change'):
+                m_duration = maneuver.get('duration', 1.0)
+                if not state['started']:
+                    current_speed = self.state.speed()
+                    if m_type == 'speed':
+                        target_spd = maneuver.get('target_speed', current_speed)
+                    else:
+                        target_spd = current_speed * maneuver.get('factor', 1.5)
+                    state['started'] = True
+                    state['target_speed'] = min(target_spd, self.max_speed)
+                
+                if t < m_time + m_duration:
+                    vel = self.state.velocity()
+                    current_spd = self.state.speed()
+                    target_spd = state['target_speed']
+                    heading = np.arctan2(vel[1], vel[0]) if current_spd > 1e-3 else 0.0
+                    spd_err = target_spd - current_spd
+                    max_d_spd = self.max_acceleration * dt
+                    if abs(spd_err) <= max_d_spd:
+                        new_spd = target_spd
+                        state['completed'] = True
+                    else:
+                        new_spd = current_spd + np.sign(spd_err) * max_d_spd
+                    desired_vel = new_spd * np.array([np.cos(heading), np.sin(heading)])
+                    spd_acc = (desired_vel - vel) / max(dt, 1e-6)
+                    return spd_acc
+                else:
+                    state['completed'] = True
+
         return acc
 
     def _saturate_acceleration(self, acc: np.ndarray) -> np.ndarray:
@@ -416,6 +471,23 @@ class TargetModel:
         new_x = self.state.x + self.state.vx * dt
         new_y = self.state.y + self.state.vy * dt
         
+        # Enforce world bounds if configured
+        if self.world_bounds is not None:
+            w, h = self.world_bounds
+            margin = 20.0
+            if new_x < margin:
+                new_x = margin
+                new_vx = abs(new_vx) * 0.5
+            elif new_x > w - margin:
+                new_x = w - margin
+                new_vx = -abs(new_vx) * 0.5
+            if new_y < margin:
+                new_y = margin
+                new_vy = abs(new_vy) * 0.5
+            elif new_y > h - margin:
+                new_y = h - margin
+                new_vy = -abs(new_vy) * 0.5
+        
         # Update state
         self.state.x = new_x
         self.state.y = new_y
@@ -438,6 +510,7 @@ class TargetModel:
         """Clear interactive commands."""
         self.target_position = None
         self.command_velocity = None
+        self._maneuver_states = {}
 
     def add_waypoint(self, x: float, y: float):
         """Add a waypoint for interactive waypoint mode."""

@@ -74,5 +74,36 @@ class TestStateTransitionMatrix(unittest.TestCase):
         np.testing.assert_array_almost_equal(Q, Q.T)
 
 
+    def test_turn_maneuver_exact_angle(self):
+        """Test that turn maneuver reaches the commanded heading angle without speed loss."""
+        model = TargetModel(initial_x=0, initial_y=0, initial_vx=30, initial_vy=0,
+                            max_speed=80, max_acceleration=20, trajectory_type='straight',
+                            process_noise_std=0.0,
+                            maneuvers=[{'time': 1.0, 'type': 'turn', 'angle': 90}])
+        for step in range(80):
+            model.step(0.05, step * 0.05)
+        vel = model.state.velocity()
+        final_heading = np.degrees(np.arctan2(vel[1], vel[0]))
+        self.assertAlmostEqual(final_heading, 90.0, delta=1.0)
+        self.assertAlmostEqual(model.state.speed(), 30.0, delta=1.0)
+
+    def test_speed_maneuver(self):
+        """Test that speed maneuver accelerates to target speed."""
+        model = TargetModel(initial_x=0, initial_y=0, initial_vx=30, initial_vy=0,
+                            max_speed=80, max_acceleration=25, trajectory_type='straight',
+                            process_noise_std=0.0,
+                            maneuvers=[{'time': 1.0, 'type': 'speed', 'target_speed': 60.0, 'duration': 2.0}])
+        for step in range(80):
+            model.step(0.05, step * 0.05)
+        self.assertAlmostEqual(model.state.speed(), 60.0, delta=1.5)
+
+    def test_unknown_maneuver_raises_error(self):
+        """Test that unknown maneuver types raise ValueError."""
+        model = TargetModel(initial_x=0, initial_y=0, initial_vx=30, initial_vy=0,
+                            maneuvers=[{'time': 1.0, 'type': 'invalid_maneuver'}])
+        with self.assertRaises(ValueError):
+            model.step(0.05, 1.5)
+
+
 if __name__ == '__main__':
     unittest.main()

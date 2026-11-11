@@ -17,6 +17,7 @@ import csv
 import time
 import datetime
 import yaml
+import copy
 import numpy as np
 from typing import List, Dict, Any, Optional
 
@@ -41,7 +42,7 @@ def load_config(path: str = None) -> dict:
 def run_single_experiment(config: dict, scenario_id: int, filter_mode: str,
                            seed: int, output_dir: str) -> Dict[str, Any]:
     """Run a single experiment and save results."""
-    config = config.copy()
+    config = copy.deepcopy(config)
     config['simulation'] = config.get('simulation', {})
     config['simulation']['random_seed'] = seed
     config['filter'] = config.get('filter', {})
