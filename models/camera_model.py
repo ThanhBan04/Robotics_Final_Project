@@ -33,6 +33,7 @@ class Measurement:
     detected: bool
     measurement_type: str  # "range_bearing" or "xy"
     raw_data: Optional[np.ndarray] = None  # Without noise for debugging
+    sensor_pose: Optional[dict] = None  # Camera pose at capture time
 
     def copy(self):
         return Measurement(
@@ -40,7 +41,8 @@ class Measurement:
             timestamp=self.timestamp,
             detected=self.detected,
             measurement_type=self.measurement_type,
-            raw_data=self.raw_data.copy() if self.raw_data is not None else None
+            raw_data=self.raw_data.copy() if self.raw_data is not None else None,
+            sensor_pose=dict(self.sensor_pose) if self.sensor_pose is not None else None,
         )
 
 
@@ -240,7 +242,8 @@ class CameraModel:
         # Check measurement rate
         if t - self.last_measurement_time < self.measurement_period - 1e-6:
             return Measurement(data=None, timestamp=t, detected=False,
-                             measurement_type=self.measurement_model)
+                             measurement_type=self.measurement_model,
+                             sensor_pose=dict(uav_pose))
         
         self.last_measurement_time = t
         
@@ -253,13 +256,15 @@ class CameraModel:
         if not in_fov:
             self.status = "Lost"
             return Measurement(data=None, timestamp=t, detected=False,
-                             measurement_type=self.measurement_model)
+                             measurement_type=self.measurement_model,
+                             sensor_pose=dict(uav_pose))
         
         # Check dropout
         if self._check_dropout(t):
             self.status = "Lost"
             return Measurement(data=None, timestamp=t, detected=False,
-                             measurement_type=self.measurement_model)
+                             measurement_type=self.measurement_model,
+                             sensor_pose=dict(uav_pose))
         
         # Compute measurement
         if self.measurement_model == "range_bearing":
@@ -274,7 +279,8 @@ class CameraModel:
             timestamp=t,
             detected=True,
             measurement_type=self.measurement_model,
-            raw_data=raw
+            raw_data=raw,
+            sensor_pose=dict(uav_pose)
         )
         
         # Handle delay
@@ -293,7 +299,8 @@ class CameraModel:
             
             # No measurement available yet due to delay
             return Measurement(data=None, timestamp=t, detected=False,
-                             measurement_type=self.measurement_model)
+                             measurement_type=self.measurement_model,
+                             sensor_pose=dict(uav_pose))
         
         self.status = "Tracking"
         return measurement

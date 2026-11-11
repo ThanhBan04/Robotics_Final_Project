@@ -81,18 +81,18 @@ def test_target_stays_within_bounds_all_12_scenarios():
     """Verify that in all 12 scenarios, target stays within [20, 1180] x [20, 780] and never touches boundaries."""
     from simulation.simulation_engine import SimulationEngine
     for sc_id in range(1, 13):
-        scfg = get_scenario_config(sc_id)
-        engine = SimulationEngine()
-        engine.setup(scfg)
-        w, h = engine.world_width, engine.world_height
-        margin = 20.0
-        
-        # Run entire scenario
-        while engine.running:
-            step = engine.simulation_step()
-            tgt = step.target_gt
-            assert margin <= tgt.x <= w - margin, f"Target x={tgt.x:.1f} hit boundary in Scenario {sc_id}"
-            assert margin <= tgt.y <= h - margin, f"Target y={tgt.y:.1f} hit boundary in Scenario {sc_id}"
+        for seed in range(1, 6):
+            scfg = get_scenario_config(sc_id)
+            engine = SimulationEngine()
+            engine.setup(scfg, random_seed=seed)
+            w, h = engine.world_width, engine.world_height
+            margin = 20.0
+            while engine.running:
+                step = engine.simulation_step()
+                tgt = step.target_gt
+                assert margin <= tgt.x <= w - margin, f"Target x={tgt.x:.1f} hit boundary in Scenario {sc_id}"
+                assert margin <= tgt.y <= h - margin, f"Target y={tgt.y:.1f} hit boundary in Scenario {sc_id}"
+            assert engine.target_model.boundary_hits == 0, f"Scenario {sc_id}, seed {seed} hit boundary"
 
 
 def test_minimum_tracking_distance_safety():
@@ -105,3 +105,43 @@ def test_minimum_tracking_distance_safety():
         engine.run_headless()
         m = engine.compute_metrics()
         assert m['min_tracking_distance'] >= 10.0, f"Scenario {sc_id} penetrated safety buffer: min dist = {m['min_tracking_distance']:.2f}m"
+
+
+def test_scenario7_no_loss_with_delay():
+    from simulation.simulation_engine import SimulationEngine
+    for filter_mode in ('ekf', 'ukf'):
+        for seed in range(1, 6):
+            engine = SimulationEngine()
+            engine.setup(get_scenario_config(7), random_seed=seed)
+            engine.filter_mode = filter_mode
+            engine.run_headless()
+            metrics = engine.compute_metrics()
+            assert metrics['has_lost_target'] is False
+            key = f'{filter_mode}_pos_rmse_post10'
+            assert metrics[key] < 15.0
+
+
+def test_no_filter_camera_detection():
+    from simulation.simulation_engine import SimulationEngine
+    engine = SimulationEngine()
+    scfg = get_scenario_config(1)
+    scfg['steady_state_init'] = True
+    engine.setup(scfg, random_seed=1)
+    engine.filter_mode = 'none'
+    engine.run_headless()
+    detected = sum(1 for step in engine.history if step.measurement and step.measurement.detected)
+    ratio = detected / len(engine.history)
+    metrics = engine.compute_metrics()
+    assert ratio >= 0.95
+    assert metrics['raw_position_rmse'] < 10.0
+
+
+def test_min_distance_all_scenarios():
+    from simulation.simulation_engine import SimulationEngine
+    for sc_id in range(1, 13):
+        for seed in range(1, 4):
+            engine = SimulationEngine()
+            engine.setup(get_scenario_config(sc_id), random_seed=seed)
+            engine.filter_mode = 'ekf'
+            engine.run_headless()
+            assert engine.compute_metrics()['min_tracking_distance'] >= 15.0, (sc_id, seed)

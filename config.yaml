@@ -37,10 +37,14 @@ camera:
   dropout_duration: 0.0   # Duration of forced dropout (s), 0 = no forced dropout
   delay: 0.0              # Measurement delay (s)
   measurement_rate: 50.0  # Measurements per second (Hz)
+  search_enabled: true    # Sweep camera heading after prolonged loss
+  reacquire_with_estimate: true  # Point camera toward estimated target
 
 filter:
   selected: "ekf"         # "ekf" or "ukf" or "both"
   process_noise_q: 5.0    # Process noise parameter for filter Q matrix
+  initial_position_var: 100.0
+  initial_velocity_var: 900.0
   # EKF-specific
   ekf: {}
   # UKF-specific

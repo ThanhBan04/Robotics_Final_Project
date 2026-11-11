@@ -104,6 +104,10 @@ class SimulationEngine:
         self._smoothed_vel: Optional[tuple] = None
         self._filters_initialized_from_measurement = False
         self.camera_reacquire_with_estimate = True
+        self.camera_search_enabled = True
+        self.camera_no_detection_duration = 0.0
+        self.initial_position_var = 100.0
+        self.initial_velocity_var = 900.0
         
         # Scenario events
         self.noise_schedule: List[dict] = []
@@ -227,10 +231,14 @@ class SimulationEngine:
             random_seed=self.random_seed + 1,
         )
         self.camera_reacquire_with_estimate = cam_cfg.get('reacquire_with_estimate', True)
+        self.camera_search_enabled = cam_cfg.get('search_enabled', True)
+        self.camera_no_detection_duration = 0.0
         
         # Filters
         filter_cfg = cfg.get('filter', {})
         process_noise_q = filter_cfg.get('process_noise_q', 5.0)
+        self.initial_position_var = float(filter_cfg.get('initial_position_var', 100.0))
+        self.initial_velocity_var = float(filter_cfg.get('initial_velocity_var', 900.0))
         
         self.ekf = ExtendedKalmanFilter(
             state_dim=4, measurement_dim=2, dt=self.dt,
@@ -297,7 +305,8 @@ class SimulationEngine:
         
         # Re-initialize filters
         if self.ekf and self.ukf:
-            P0 = np.diag([100, 100, 25, 25]).astype(float)
+            P0 = np.diag([self.initial_position_var, self.initial_position_var,
+                          self.initial_velocity_var, self.initial_velocity_var]).astype(float)
             R = self.camera.get_measurement_noise_covariance()
             self.ekf.set_measurement_noise(R)
             self.ukf.set_measurement_noise(R)
@@ -352,7 +361,13 @@ class SimulationEngine:
         # A camera pointed along the UAV velocity can lose a maneuvering
         # target permanently.  When enabled, use the last filter estimate as
         # a bounded visual-search heading; this does not reveal ground truth.
-        if self.camera_reacquire_with_estimate and self._filters_initialized_from_measurement:
+        if self.filter_mode in ('none', 'raw', 'none_smoothed'):
+            raw_for_heading = self._smoothed_pos if self.filter_mode == 'none_smoothed' else self._last_raw_pos
+            if raw_for_heading is not None:
+                measurement_pose['heading'] = float(np.arctan2(
+                    raw_for_heading[1] - uav_pose['y'],
+                    raw_for_heading[0] - uav_pose['x']))
+        elif self.camera_reacquire_with_estimate and self._filters_initialized_from_measurement:
             estimate_for_camera = None
             if self.filter_mode == 'ukf' and self.ukf.initialized:
                 estimate_for_camera = self.ukf.get_estimated_state()
@@ -364,26 +379,40 @@ class SimulationEngine:
                 if dx * dx + dy * dy > 1e-6:
                     measurement_pose['heading'] = float(np.arctan2(dy, dx))
 
+        # If the target has been absent for long enough, sweep around the
+        # predicted/raw direction to reacquire it.  Forced camera dropout is
+        # still respected by CameraModel; the sweep only affects FOV search.
+        if self.camera_search_enabled and self.camera_no_detection_duration > 1.0:
+            elapsed = self.camera_no_detection_duration - 1.0
+            amplitude = np.radians(min(30.0 + 150.0 * elapsed / 4.0, 180.0))
+            measurement_pose['heading'] += amplitude * np.sin(2.0 * np.pi * self.time / 2.0)
+
         measurement = self.camera.measure(target_gt, measurement_pose, self.time)
+        if measurement.detected:
+            self.camera_no_detection_duration = 0.0
+        else:
+            self.camera_no_detection_duration += self.dt
         step_data.measurement = measurement
         
         # 3. Filter estimation
         meas_data = measurement.data if measurement.detected else None
+        filter_pose = measurement.sensor_pose or measurement_pose
 
         # Initialize filters from the first actual measurement.  This keeps
         # the experiment honest: the filter does not receive target ground
         # truth or the target's initial velocity.
         if not self._filters_initialized_from_measurement and meas_data is not None:
             r, theta = float(meas_data[0]), float(meas_data[1])
-            bearing = uav_pose['heading'] + theta
+            capture_pose = measurement.sensor_pose or measurement_pose
+            bearing = capture_pose['heading'] + theta
             init_state = np.array([
-                uav_pose['x'] + r * np.cos(bearing),
-                uav_pose['y'] + r * np.sin(bearing),
+                capture_pose['x'] + r * np.cos(bearing),
+                capture_pose['y'] + r * np.sin(bearing),
                 0.0,
                 0.0,
             ], dtype=float)
-            range_var = max(float(self.camera.noise_range_std) ** 2 * 4.0, 100.0)
-            P0 = np.diag([range_var, range_var, 900.0, 900.0])
+            P0 = np.diag([self.initial_position_var, self.initial_position_var,
+                          self.initial_velocity_var, self.initial_velocity_var])
             self.ekf.initialize(init_state, P0)
             self.ukf.initialize(init_state.copy(), P0.copy())
             self._filters_initialized_from_measurement = True
@@ -394,7 +423,7 @@ class SimulationEngine:
         
         if self.filter_mode in ('ekf', 'both') and self.ekf.initialized:
             t0 = time.perf_counter()
-            ekf_result = self.ekf.step(meas_data, measurement_pose, self.dt, self.time)
+            ekf_result = self.ekf.step(meas_data, filter_pose, self.dt, self.time)
             self.ekf_step_times.append(time.perf_counter() - t0)
             
             ekf_est_dict = self.ekf.get_estimated_state()
@@ -411,7 +440,7 @@ class SimulationEngine:
         
         if self.filter_mode in ('ukf', 'both') and self.ukf.initialized:
             t0 = time.perf_counter()
-            ukf_result = self.ukf.step(meas_data, measurement_pose, self.dt, self.time)
+            ukf_result = self.ukf.step(meas_data, filter_pose, self.dt, self.time)
             self.ukf_step_times.append(time.perf_counter() - t0)
             
             ukf_est_dict = self.ukf.get_estimated_state()
@@ -430,9 +459,10 @@ class SimulationEngine:
             # No-filter baseline: raw measurement converted to Cartesian
             if measurement.detected and meas_data is not None:
                 r, theta = meas_data[0], meas_data[1]
-                bearing = measurement_pose['heading'] + theta
-                x_meas = measurement_pose['x'] + r * np.cos(bearing)
-                y_meas = measurement_pose['y'] + r * np.sin(bearing)
+                capture_pose = measurement.sensor_pose or measurement_pose
+                bearing = capture_pose['heading'] + theta
+                x_meas = capture_pose['x'] + r * np.cos(bearing)
+                y_meas = capture_pose['y'] + r * np.sin(bearing)
                 if self._last_raw_pos is not None:
                     vx_meas = (x_meas - self._last_raw_pos[0]) / max(self.dt, 1e-6)
                     vy_meas = (y_meas - self._last_raw_pos[1]) / max(self.dt, 1e-6)
@@ -775,6 +805,9 @@ class SimulationEngine:
         # Target loss criteria (TN4): Separated into camera dropout vs true estimation divergence
         has_lost = False
         lost_time = None
+        had_estimation_divergence = False
+        recovery_time = None
+        active_loss_start = None
         camera_dropout_detected = False
         consecutive_high_error = 0
         consecutive_no_meas = 0
@@ -785,7 +818,7 @@ class SimulationEngine:
         for step in self.history:
             if self.filter_mode == 'ukf':
                 err = step.estimation_error_ukf
-            elif self.filter_mode in ('none', 'raw'):
+            elif self.filter_mode in ('none', 'raw', 'none_smoothed'):
                 err = step.estimation_error_raw
             else:
                 err = step.estimation_error_ekf
@@ -803,14 +836,28 @@ class SimulationEngine:
             if consecutive_no_meas > steps_3s:
                 camera_dropout_detected = True
                 
-            # True lost target is based on filter estimation divergence (>50m continuously for >2s)
-            if consecutive_high_error > steps_2s and not has_lost:
-                has_lost = True
-                lost_time = float(step.time)
+            # Mark a divergence event only after it persists for 2 seconds.
+            # A search/reacquisition that brings the estimate back is not an
+            # unrecovered target loss, so it must not count as a failed run.
+            if consecutive_high_error > steps_2s:
+                had_estimation_divergence = True
+                if active_loss_start is None:
+                    active_loss_start = float(step.time - 2.0)
+            elif active_loss_start is not None:
+                recovery_time = float(step.time)
+                active_loss_start = None
+
+        if active_loss_start is not None:
+            has_lost = True
+            lost_time = active_loss_start
                 
         metrics['has_lost_target'] = bool(has_lost)
         metrics['lost_target_time'] = lost_time
+        metrics['had_estimation_divergence'] = bool(had_estimation_divergence)
+        metrics['recovery_time'] = recovery_time
         metrics['camera_dropout_detected'] = bool(camera_dropout_detected)
+        if self.target_model is not None:
+            metrics['boundary_hits'] = int(self.target_model.boundary_hits)
 
         return metrics
 

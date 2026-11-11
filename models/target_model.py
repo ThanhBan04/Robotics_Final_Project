@@ -113,6 +113,7 @@ class TargetModel:
         # Maneuver scheduling (for scenario testing)
         self.maneuvers: List[dict] = kwargs.get('maneuvers', [])
         self.world_bounds = kwargs.get('world_bounds', None)
+        self.boundary_hits = 0
         self._maneuver_states: Dict[int, dict] = {}
         
         # Initialize circular trajectory center
@@ -130,6 +131,7 @@ class TargetModel:
         self.target_position = None
         self.command_velocity = None
         self._maneuver_states = {}
+        self.boundary_hits = 0
 
     def get_state_transition_matrix(self, dt: float) -> np.ndarray:
         """
@@ -476,15 +478,19 @@ class TargetModel:
             w, h = self.world_bounds
             margin = 20.0
             if new_x < margin:
+                self.boundary_hits += 1
                 new_x = margin
                 new_vx = abs(new_vx) * 0.5
             elif new_x > w - margin:
+                self.boundary_hits += 1
                 new_x = w - margin
                 new_vx = -abs(new_vx) * 0.5
             if new_y < margin:
+                self.boundary_hits += 1
                 new_y = margin
                 new_vy = abs(new_vy) * 0.5
             elif new_y > h - margin:
+                self.boundary_hits += 1
                 new_y = h - margin
                 new_vy = -abs(new_vy) * 0.5
         

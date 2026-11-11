@@ -271,6 +271,26 @@ Mỗi lượt chạy lưu vào `results/data/`:
 7. Các kịch bản 8–11 khi chạy hàng loạt (headless / batch) sử dụng quỹ đạo định sẵn (deterministic) để đảm bảo khả năng tái lập khoa học
 8. Phương pháp tích phân số học Euler bán ẩn (Semi-implicit Euler) được áp dụng thống nhất cho cả mô hình động học UAV và mục tiêu
 
+## Giả thiết và thay đổi so với thiết kế ban đầu
+
+- Camera mô phỏng có thể quay theo vị trí target ước lượng, tương đương camera có gimbal; khi mất target liên tục quá 1 giây, camera bật chế độ quét để tìm lại.
+- Mỗi measurement lưu `sensor_pose`, tức tư thế camera tại đúng thời điểm chụp. Khi measurement bị delay, EKF/UKF và phép đổi range-bearing sang tọa độ dùng lại tư thế này.
+- EKF/UKF được khởi tạo từ measurement đầu tiên, với vận tốc ban đầu bằng 0 và hiệp phương sai P0 cấu hình được trong `filter.initial_position_var` và `filter.initial_velocity_var`.
+- UKF dùng `alpha=1`, `beta=2`, `kappa=0`.
+- Các scenario được giữ trong giới hạn bản đồ; vận tốc ban đầu của một số scenario được giới hạn để tránh tạo quỹ đạo không khả thi. Scenario 11 có lệnh tăng tốc lên 40 m/s và scenario 12 dùng quỹ đạo zigzag đã cấu hình.
+- Khi chạy batch/headless, scenario 8–12 sử dụng quỹ đạo định sẵn để bảo đảm tái lập; khi chạy GUI, chúng vẫn nhận điều khiển tương tác.
+
+## Kiểm chứng sau các sửa lỗi
+
+- Bộ hồi quy hiện có **77 test đạt**.
+- TN0: 480 dòng dữ liệu = 12 scenario × 20 seed × 2 filter; có `pos_rmse_post10`, `tracking_rmse_post10`, mean/std/median.
+- TN3: 480 dòng = 6 thời lượng dropout × 2 kiểu chuyển động × 20 seed × 2 filter.
+- TN4: 480 dòng = 12 scenario × 20 seed × 2 filter; tách riêng camera dropout và estimation loss.
+- TN5: 280 dòng, gồm sweep khoảng cách, tần số đo và P0; TN6/TN7 có CSV thống kê NEES, NIS và thời gian mỗi bước.
+- So với lỗi trước đây, TN1 chế độ `none` hiện giữ sai số vị trí khoảng 2–3 m ở baseline thay vì hàng trăm mét và đạt tỷ lệ detection trên 95% trong test hồi quy.
+- Với scenario 7, sau khi dùng đúng tư thế camera tại thời điểm chụp và xử lý measurement delay, estimation loss trong TN4 giảm còn 0% với EKF và 5% với UKF trên 20 seed.
+- Với TN3 target đang rẽ, chế độ quét giúp tỷ lệ estimation loss là 0% ở dropout 3 s và 5 s cho cả hai filter; ở dropout 8 s là 0% trong bộ chạy hiện tại. Dropout 10 s vẫn là trường hợp khó và được giữ lại để thảo luận hạn chế.
+
 ---
 
 ## Tác giả & Giấy phép

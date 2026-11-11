@@ -406,13 +406,42 @@ def run_experiment_tn5(seeds=range(1, 11), output_dir="results/experiments/TN5")
                 'tracking_rmse': m.get('tracking_rmse', 0.0)
             })
 
+    # Quét 3: độ bất định khởi tạo P0 (giữ nguyên target/scenario và seed).
+    for position_var in [100.0, 1000.0, 10000.0]:
+        for velocity_var in [900.0, 2500.0]:
+            for s in seeds:
+                scfg = get_scenario_config(1, cfg)
+                scfg['steady_state_init'] = True
+                scfg['filter'] = {
+                    'initial_position_var': position_var,
+                    'initial_velocity_var': velocity_var,
+                }
+                engine = SimulationEngine(cfg)
+                engine.setup(scfg, random_seed=s)
+                engine.filter_mode = 'both'
+                engine.run_headless()
+                m = engine.compute_metrics()
+                ekf_rmse = m.get('ekf_position_rmse', 0.0)
+                ukf_rmse = m.get('ukf_position_rmse', 0.0)
+                records.append({
+                    'sweep_type': 'initial_covariance',
+                    'param_value': f'{position_var:g}/{velocity_var:g}',
+                    'position_var': position_var,
+                    'velocity_var': velocity_var,
+                    'seed': s,
+                    'ekf_rmse': ekf_rmse,
+                    'ukf_rmse': ukf_rmse,
+                    'ratio_ukf_to_ekf': ukf_rmse / ekf_rmse if ekf_rmse > 1e-4 else 1.0,
+                    'tracking_rmse': m.get('tracking_rmse', 0.0)
+                })
+
     df = pd.DataFrame(records)
     csv_path = os.path.join(output_dir, "tn5_nonlinearity_summary.csv")
     df.to_csv(csv_path, index=False)
     print(f"[OK] Đã lưu số liệu TN5 tại: {csv_path}")
 
     # Vẽ biểu đồ
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5), dpi=150)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(21, 5), dpi=150)
     
     # Subplot 1: Theo khoảng cách
     dist_sub = df[df['sweep_type'] == 'distance'].groupby('param_value').agg({
@@ -437,6 +466,23 @@ def run_experiment_tn5(seeds=range(1, 11), output_dir="results/experiments/TN5")
     ax2.set_ylabel("RMSE Ratio (< 1.0 means UKF outperforms EKF)", fontsize=10)
     ax2.legend()
     ax2.grid(True, linestyle='--', alpha=0.5)
+
+    # Subplot 3: P0 sweep
+    p0_sub = df[df['sweep_type'] == 'initial_covariance'].groupby(
+        ['position_var', 'velocity_var']).agg({
+            'ekf_rmse': 'mean', 'ukf_rmse': 'mean', 'ratio_ukf_to_ekf': 'mean'
+        }).reset_index()
+    labels = [f"{int(r.position_var)}/{int(r.velocity_var)}" for r in p0_sub.itertuples()]
+    x3 = np.arange(len(labels))
+    ax3.plot(x3, p0_sub['ekf_rmse'], marker='o', label='EKF RMSE', color='#1976d2')
+    ax3.plot(x3, p0_sub['ukf_rmse'], marker='s', label='UKF RMSE', color='#388e3c')
+    ax3.set_title('Initial Covariance Sweep (P0)', fontsize=11, fontweight='bold')
+    ax3.set_xlabel('Position variance / velocity variance', fontsize=10)
+    ax3.set_ylabel('Position RMSE (m)', fontsize=10)
+    ax3.set_xticks(x3)
+    ax3.set_xticklabels(labels, rotation=35, ha='right', fontsize=8)
+    ax3.legend()
+    ax3.grid(True, linestyle='--', alpha=0.5)
 
     plt.tight_layout()
     fig_path = os.path.join(output_dir, "tn5_nonlinearity_sweep.png")
