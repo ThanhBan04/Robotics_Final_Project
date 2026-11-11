@@ -34,3 +34,28 @@ def test_invalid_scenario_id():
         get_scenario_config(0)
     with pytest.raises(ValueError):
         get_scenario_config(13)
+
+
+def test_simulation_with_no_filter():
+    from simulation.simulation_engine import SimulationEngine
+    scfg = get_scenario_config(1)
+    engine = SimulationEngine()
+    engine.setup(scfg)
+    engine.filter_mode = 'none'
+    for _ in range(50):
+        engine.simulation_step()
+    m = engine.compute_metrics()
+    assert 'raw_position_rmse' in m
+    assert 'pid_acceleration_jitter' in m
+    assert 'has_lost_target' in m
+
+
+def test_simulation_with_steady_state_init():
+    from simulation.simulation_engine import SimulationEngine
+    scfg = get_scenario_config(1)
+    scfg['steady_state_init'] = True
+    engine = SimulationEngine()
+    engine.setup(scfg)
+    step = engine.simulation_step()
+    # At t=0, distance should be very close to 50m
+    assert abs(step.tracking_distance - 50.0) < 5.0

@@ -257,15 +257,6 @@ Mỗi lượt chạy lưu vào `results/data/`:
 
 ---
 
-## Khai báo Sử dụng Công cụ Trí tuệ Nhân tạo (AI Assistance Disclosure)
-
-Tuân thủ quy định liêm chính học thuật tại hướng dẫn học phần Kỹ thuật Robot:
-- **Công cụ sử dụng:** Google DeepMind Antigravity & Anthropic Claude.
-- **Phạm vi hỗ trợ:** Hỗ trợ phát hiện lỗi cú pháp, rà soát ma trận điểm sigma UKF, đề xuất phương pháp lập lịch kịch bản điều khiển và hỗ trợ sinh biểu đồ Matplotlib.
-- **Phần tự thực hiện và chịu trách nhiệm:** Sinh viên trực tiếp thiết kế bài toán, xây dựng công thức toán học, cấu hình tham số, kiểm thử thực nghiệm trên máy tính cá nhân và chịu trách nhiệm hoàn toàn về tính chính xác của toàn bộ dữ liệu, mã nguồn và báo cáo.
-
----
-
 ## Tài liệu tham khảo
 
 1. R. E. Kalman, "A New Approach to Linear Filtering and Prediction Problems," *Journal of Basic Engineering*, vol. 82, no. 1, pp. 35-45, 1960.

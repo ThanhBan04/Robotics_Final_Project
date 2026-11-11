@@ -43,8 +43,14 @@ class SimulationStep:
     # Estimates
     ekf_estimate: Optional[dict] = None
     ukf_estimate: Optional[dict] = None
+    raw_estimate: Optional[dict] = None
     ekf_covariance: Optional[np.ndarray] = None
     ukf_covariance: Optional[np.ndarray] = None
+    # Innovations & Covariances (for consistency NEES/NIS)
+    ekf_innovation: Optional[np.ndarray] = None
+    ekf_innovation_cov: Optional[np.ndarray] = None
+    ukf_innovation: Optional[np.ndarray] = None
+    ukf_innovation_cov: Optional[np.ndarray] = None
     # Control
     pid_command: Optional[np.ndarray] = None
     desired_position: Optional[np.ndarray] = None
@@ -52,6 +58,7 @@ class SimulationStep:
     tracking_distance: float = 0.0
     estimation_error_ekf: float = 0.0
     estimation_error_ukf: float = 0.0
+    estimation_error_raw: float = 0.0
 
 
 class SimulationEngine:
@@ -86,7 +93,13 @@ class SimulationEngine:
         self.history: List[SimulationStep] = []
         
         # Active filter selection
-        self.filter_mode = self.config.get('filter', {}).get('selected', 'ekf')  # 'ekf', 'ukf', 'both'
+        self.filter_mode = self.config.get('filter', {}).get('selected', 'ekf')  # 'ekf', 'ukf', 'both', 'none'
+        
+        # Performance & Timing
+        self.ekf_step_times: List[float] = []
+        self.ukf_step_times: List[float] = []
+        self._last_raw_pos: Optional[tuple] = None
+        self._last_raw_vel: Optional[tuple] = None
         
         # Scenario events
         self.noise_schedule: List[dict] = []
@@ -101,13 +114,16 @@ class SimulationEngine:
         self.ukf: Optional[UnscentedKalmanFilter] = None
         self.pid: Optional[PIDController] = None
 
-    def setup(self, scenario_config: Dict[str, Any] = None):
+    def setup(self, scenario_config: Dict[str, Any] = None, random_seed: Optional[int] = None):
         """
         Set up all simulation modules.
         
         Args:
             scenario_config: Scenario-specific configuration overrides
+            random_seed: Optional random seed override for reproducible variations
         """
+        if random_seed is not None:
+            self.random_seed = random_seed
         cfg = copy.deepcopy(self.config)
         if scenario_config:
             # Merge scenario config
@@ -158,11 +174,29 @@ class SimulationEngine:
         if scenario_config and 'uav' in scenario_config:
             uav_cfg = {**uav_cfg, **scenario_config['uav']}
         
+        if scenario_config and scenario_config.get('steady_state_init', False):
+            t_x = target_cfg.get('initial_x', 300.0)
+            t_y = target_cfg.get('initial_y', 400.0)
+            t_vx = target_cfg.get('initial_vx', 30.0)
+            t_vy = target_cfg.get('initial_vy', 0.0)
+            t_spd = np.sqrt(t_vx**2 + t_vy**2)
+            t_hdg = np.arctan2(t_vy, t_vx) if t_spd > 1e-3 else 0.0
+            des_dist = cfg.get('pid', {}).get('desired_distance', 50.0)
+            uav_x0 = t_x - des_dist * np.cos(t_hdg)
+            uav_y0 = t_y - des_dist * np.sin(t_hdg)
+            uav_vx0 = t_vx
+            uav_vy0 = t_vy
+        else:
+            uav_x0 = uav_cfg.get('initial_x', 100.0)
+            uav_y0 = uav_cfg.get('initial_y', 400.0)
+            uav_vx0 = uav_cfg.get('initial_vx', 0.0)
+            uav_vy0 = uav_cfg.get('initial_vy', 0.0)
+
         self.uav_model = UAVModel(
-            initial_x=uav_cfg.get('initial_x', 100.0),
-            initial_y=uav_cfg.get('initial_y', 400.0),
-            initial_vx=uav_cfg.get('initial_vx', 0.0),
-            initial_vy=uav_cfg.get('initial_vy', 0.0),
+            initial_x=uav_x0,
+            initial_y=uav_y0,
+            initial_vx=uav_vx0,
+            initial_vy=uav_vy0,
             max_speed=uav_cfg.get('max_speed', 100.0),
             max_acceleration=uav_cfg.get('max_acceleration', 25.0),
             world_bounds=(self.world_width, self.world_height),
@@ -329,30 +363,77 @@ class SimulationEngine:
         
         ekf_est_dict = None
         ukf_est_dict = None
+        raw_est_dict = None
         
         if self.filter_mode in ('ekf', 'both'):
+            t0 = time.perf_counter()
             ekf_result = self.ekf.step(meas_data, uav_pose, self.dt, self.time)
+            self.ekf_step_times.append(time.perf_counter() - t0)
+            
             ekf_est_dict = self.ekf.get_estimated_state()
             step_data.ekf_estimate = ekf_est_dict
             step_data.ekf_covariance = ekf_result.covariance.copy()
+            if ekf_result.innovation is not None:
+                step_data.ekf_innovation = ekf_result.innovation.copy()
+            if ekf_result.innovation_covariance is not None:
+                step_data.ekf_innovation_cov = ekf_result.innovation_covariance.copy()
             step_data.estimation_error_ekf = np.sqrt(
                 (ekf_est_dict['x'] - target_gt.x)**2 + 
                 (ekf_est_dict['y'] - target_gt.y)**2
             )
         
         if self.filter_mode in ('ukf', 'both'):
+            t0 = time.perf_counter()
             ukf_result = self.ukf.step(meas_data, uav_pose, self.dt, self.time)
+            self.ukf_step_times.append(time.perf_counter() - t0)
+            
             ukf_est_dict = self.ukf.get_estimated_state()
             step_data.ukf_estimate = ukf_est_dict
             step_data.ukf_covariance = ukf_result.covariance.copy()
+            if ukf_result.innovation is not None:
+                step_data.ukf_innovation = ukf_result.innovation.copy()
+            if ukf_result.innovation_covariance is not None:
+                step_data.ukf_innovation_cov = ukf_result.innovation_covariance.copy()
             step_data.estimation_error_ukf = np.sqrt(
                 (ukf_est_dict['x'] - target_gt.x)**2 + 
                 (ukf_est_dict['y'] - target_gt.y)**2
+            )
+            
+        if self.filter_mode in ('none', 'raw'):
+            # No-filter baseline: raw measurement converted to Cartesian
+            if measurement.detected and meas_data is not None:
+                r, theta = meas_data[0], meas_data[1]
+                bearing = uav_pose['heading'] + theta
+                x_meas = uav_pose['x'] + r * np.cos(bearing)
+                y_meas = uav_pose['y'] + r * np.sin(bearing)
+                if self._last_raw_pos is not None:
+                    vx_meas = (x_meas - self._last_raw_pos[0]) / max(self.dt, 1e-6)
+                    vy_meas = (y_meas - self._last_raw_pos[1]) / max(self.dt, 1e-6)
+                else:
+                    vx_meas, vy_meas = 0.0, 0.0
+                self._last_raw_pos = (x_meas, y_meas)
+                self._last_raw_vel = (vx_meas, vy_meas)
+            else:
+                # Hold last raw measurement during dropout
+                if self._last_raw_pos is not None:
+                    x_meas, y_meas = self._last_raw_pos
+                    vx_meas, vy_meas = self._last_raw_vel
+                else:
+                    x_meas, y_meas = uav_pose['x'], uav_pose['y']
+                    vx_meas, vy_meas = 0.0, 0.0
+            
+            raw_est_dict = {'x': x_meas, 'y': y_meas, 'vx': vx_meas, 'vy': vy_meas}
+            step_data.raw_estimate = raw_est_dict
+            step_data.estimation_error_raw = np.sqrt(
+                (x_meas - target_gt.x)**2 + 
+                (y_meas - target_gt.y)**2
             )
         
         # 4. PID control using active filter's estimate
         if self.filter_mode == 'ukf':
             active_estimate = ukf_est_dict
+        elif self.filter_mode in ('none', 'raw'):
+            active_estimate = raw_est_dict
         else:
             active_estimate = ekf_est_dict  # Default to EKF
         
@@ -527,8 +608,10 @@ class SimulationEngine:
         # Estimation errors
         ekf_pos_errors = []
         ukf_pos_errors = []
+        raw_pos_errors = []
         ekf_vel_errors = []
         ukf_vel_errors = []
+        raw_vel_errors = []
         tracking_distances = []
         tracking_errors = []
         desired_dist = self.pid.desired_distance if self.pid else 50.0
@@ -557,6 +640,16 @@ class SimulationEngine:
                     (step.ukf_estimate['vx'] - step.target_gt.vx)**2 +
                     (step.ukf_estimate['vy'] - step.target_gt.vy)**2
                 ))
+                
+            if step.raw_estimate and step.target_gt:
+                raw_pos_errors.append(np.sqrt(
+                    (step.raw_estimate['x'] - step.target_gt.x)**2 +
+                    (step.raw_estimate['y'] - step.target_gt.y)**2
+                ))
+                raw_vel_errors.append(np.sqrt(
+                    (step.raw_estimate['vx'] - step.target_gt.vx)**2 +
+                    (step.raw_estimate['vy'] - step.target_gt.vy)**2
+                ))
         
         # Position RMSE
         if ekf_pos_errors:
@@ -568,6 +661,22 @@ class SimulationEngine:
             metrics['ukf_position_rmse'] = np.sqrt(np.mean(np.array(ukf_pos_errors)**2))
             metrics['ukf_velocity_rmse'] = np.sqrt(np.mean(np.array(ukf_vel_errors)**2))
             metrics['ukf_max_position_error'] = np.max(ukf_pos_errors)
+
+        if raw_pos_errors:
+            metrics['raw_position_rmse'] = np.sqrt(np.mean(np.array(raw_pos_errors)**2))
+            metrics['raw_velocity_rmse'] = np.sqrt(np.mean(np.array(raw_vel_errors)**2))
+            metrics['raw_max_position_error'] = np.max(raw_pos_errors)
+
+        # Computation time (us)
+        if self.ekf_step_times:
+            metrics['ekf_mean_step_time_us'] = float(np.mean(self.ekf_step_times) * 1e6)
+        if self.ukf_step_times:
+            metrics['ukf_mean_step_time_us'] = float(np.mean(self.ukf_step_times) * 1e6)
+
+        # PID acceleration jitter
+        pid_cmd_norms = [np.linalg.norm(step.pid_command) for step in self.history if step.pid_command is not None]
+        if pid_cmd_norms:
+            metrics['pid_acceleration_jitter'] = float(np.std(pid_cmd_norms))
         
         # Tracking metrics
         if tracking_errors:
@@ -589,6 +698,40 @@ class SimulationEngine:
                     break
         metrics['settling_time'] = settling_time
         
+        # Target loss criteria (TN4)
+        has_lost = False
+        lost_time = None
+        consecutive_high_error = 0
+        consecutive_no_meas = 0
+        dt = self.dt
+        steps_2s = int(2.0 / dt)
+        steps_3s = int(3.0 / dt)
+        
+        for step in self.history:
+            if self.filter_mode == 'ukf':
+                err = step.estimation_error_ukf
+            elif self.filter_mode in ('none', 'raw'):
+                err = step.estimation_error_raw
+            else:
+                err = step.estimation_error_ekf
+                
+            if err > 50.0:
+                consecutive_high_error += 1
+            else:
+                consecutive_high_error = 0
+                
+            if step.measurement is None or not step.measurement.detected:
+                consecutive_no_meas += 1
+            else:
+                consecutive_no_meas = 0
+                
+            if (consecutive_high_error > steps_2s or consecutive_no_meas > steps_3s) and not has_lost:
+                has_lost = True
+                lost_time = float(step.time)
+                
+        metrics['has_lost_target'] = bool(has_lost)
+        metrics['lost_target_time'] = lost_time
+
         return metrics
 
     def save_metrics(self, output_dir: str, metrics: Dict[str, Any] = None):
