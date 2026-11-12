@@ -293,13 +293,6 @@ Mỗi lượt chạy lưu vào `results/data/`:
 
 ---
 
-## Tác giả & Giấy phép
-
-- **Tác giả:** Nguyễn Thanh Bản (ThanhBan04) — Sinh viên học phần Kỹ thuật Robot
-- **Giấy phép:** [MIT License](LICENSE)
-
----
-
 ## Tài liệu tham khảo
 
 1. R. E. Kalman, "A New Approach to Linear Filtering and Prediction Problems," *Journal of Basic Engineering*, vol. 82, no. 1, pp. 35-45, 1960.
