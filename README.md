@@ -291,6 +291,27 @@ Mỗi lượt chạy lưu vào `results/data/`:
 - Với scenario 7, sau khi dùng đúng tư thế camera tại thời điểm chụp và xử lý measurement delay, estimation loss trong TN4 giảm còn 0% với EKF và 5% với UKF trên 20 seed.
 - Trong TN3/TN4, `estimation_loss`/`has_lost_target` chỉ tính trường hợp bộ lọc không tìm lại được mục tiêu đến cuối lần chạy. `divergence_rate` lại tính mọi lần sai số vị trí vượt 50 m liên tục quá 2 s, kể cả khi sau đó đã hồi phục; `recovery_time` ghi thời điểm hồi phục đầu tiên. Với mục tiêu đang rẽ và mất tín hiệu từ 5 s trở lên, bộ lọc vẫn phân kỳ tạm thời rồi tìm lại nhờ chế độ quét. Theo CSV TN3 mới, ở chuyển động rẽ: dropout 5 s có `divergence_rate` 100% và position RMSE trung bình 54,49 m (EKF), 42,03 m (UKF), hồi phục trung bình tại 17,60 s và 16,54 s; dropout 8 s là 100%, 96,54 m và 122,39 m, hồi phục tại 20,71 s và 22,03 s; dropout 10 s là 100%, 145,77 m và 156,68 m, hồi phục tại 23,76 s và 24,76 s. Trong các dòng chuyển động thẳng, `divergence_rate` vẫn 0% ở cả sáu thời lượng. Theo TN4, scenario 7 có `divergence_rate` 5% cho cả EKF/UKF; `estimation_loss_rate` là 0% với EKF và 5% với UKF, còn `max_estimation_error_mean` là 36,75 m và 40,10 m. Các số liệu này nằm trong `results/experiments/TN3/tn3_summary.csv` và `results/experiments/TN4/tn4_summary.csv`.
 
+### Chi tiết TN3 về hồi phục sau dropout
+
+- Với mục tiêu đang rẽ và dropout 10 s, UKF có `35%` lần chạy không tìm lại được mục tiêu, tức `7/20` lần. Giá trị `recovery_time = 24,76 s` là trung bình của `13` lần chạy có hồi phục, không phải toàn bộ 20 lần.
+- Thời gian hồi phục dưới đây được tính từ lúc kết thúc dropout: `recovery_time - (10 + dropout_duration)`.
+
+| Dropout | Filter | Divergence rate | Không hồi phục | Recovery time trung bình | Hồi phục sau dropout |
+|---:|:---:|---:|---:|---:|---:|
+| 5 s | EKF | 100% | 0/20 | 17,60 s | 2,60 s |
+| 5 s | UKF | 100% | 0/20 | 16,54 s | 1,54 s |
+| 8 s | EKF | 100% | 0/20 | 20,71 s | 2,71 s |
+| 8 s | UKF | 100% | 0/20 | 22,03 s | 4,03 s |
+| 10 s | EKF | 100% | 0/20 | 23,76 s | 3,76 s |
+| 10 s | UKF | 100% | 7/20 | 24,76 s trên 13 lần hồi phục | 4,76 s trên 13 lần hồi phục |
+
+---
+
+## Tác giả & Giấy phép
+
+- **Tác giả:** Nguyễn Thanh Bản (ThanhBan04) — Sinh viên học phần Kỹ thuật Robot
+- **Giấy phép:** [MIT License](LICENSE)
+
 ---
 
 ## Tài liệu tham khảo

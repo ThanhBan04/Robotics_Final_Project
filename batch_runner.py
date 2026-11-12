@@ -34,7 +34,7 @@ def load_config(path: str = None) -> dict:
     if path is None:
         path = os.path.join(PROJECT_ROOT, 'config.yaml')
     if os.path.exists(path):
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f) or {}
     return {}
 

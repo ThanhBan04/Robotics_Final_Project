@@ -201,8 +201,9 @@ class DropdownSelect:
 class ControlPanel:
     """Container for all control panel widgets."""
 
-    def __init__(self, rect: pygame.Rect):
+    def __init__(self, rect: pygame.Rect, config: Dict[str, Any] = None):
         self.rect = rect
+        self.config = config or {}
         self.buttons: Dict[str, Button] = {}
         self.sliders: Dict[str, Slider] = {}
         self.dropdowns: Dict[str, DropdownSelect] = {}
@@ -211,6 +212,9 @@ class ControlPanel:
         self._build_controls()
 
     def _build_controls(self):
+        pid_cfg = self.config.get('pid', {})
+        target_cfg = self.config.get('target', {})
+        camera_cfg = self.config.get('camera', {})
         x = self.rect.x + 8
         y = self.rect.y + 30
         w = self.rect.width - 16
@@ -267,22 +271,28 @@ class ControlPanel:
         sh = 20
         step = 24
         self.sliders['noise_level'] = Slider(
-            pygame.Rect(x, y, w, sh), "Noise Level", 0.5, 10.0, 2.0, ".1f")
+            pygame.Rect(x, y, w, sh), "Noise Level", 0.5, 10.0,
+            float(camera_cfg.get('noise_range_std', 2.0)), ".1f")
         y += step
         self.sliders['desired_dist'] = Slider(
-            pygame.Rect(x, y, w, sh), "Follow Dist", 10.0, 150.0, 50.0, ".0f")
+            pygame.Rect(x, y, w, sh), "Follow Dist", 10.0, 150.0,
+            float(pid_cfg.get('desired_distance', 50.0)), ".0f")
         y += step
         self.sliders['kp'] = Slider(
-            pygame.Rect(x, y, w, sh), "Kp", 0.1, 10.0, 2.0, ".1f")
+            pygame.Rect(x, y, w, sh), "Kp", 0.1, 10.0,
+            float(pid_cfg.get('kp', 0.0)), ".1f")
         y += step
         self.sliders['ki'] = Slider(
-            pygame.Rect(x, y, w, sh), "Ki", 0.0, 2.0, 0.1, ".2f")
+            pygame.Rect(x, y, w, sh), "Ki", 0.0, 2.0,
+            float(pid_cfg.get('ki', 0.0)), ".2f")
         y += step
         self.sliders['kd'] = Slider(
-            pygame.Rect(x, y, w, sh), "Kd", 0.0, 5.0, 1.5, ".1f")
+            pygame.Rect(x, y, w, sh), "Kd", 0.0, 5.0,
+            float(pid_cfg.get('kd', 0.0)), ".1f")
         y += step
         self.sliders['target_speed'] = Slider(
-            pygame.Rect(x, y, w, sh), "Tgt Speed", 5.0, 100.0, 30.0, ".0f")
+            pygame.Rect(x, y, w, sh), "Tgt Speed", 5.0, 100.0,
+            float(target_cfg.get('max_speed', 30.0)), ".0f")
         y += step
         self.sliders['dropout_dur'] = Slider(
             pygame.Rect(x, y, w, sh), "Drop Dur(s)", 0.5, 10.0, 3.0, ".1f")

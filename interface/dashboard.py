@@ -115,7 +115,8 @@ class Dashboard:
         self.font = pygame.font.SysFont("consolas", 12)
 
         self.telemetry_panel = TelemetryPanel(self.telemetry_rect)
-        self.control_panel = ControlPanel(self.panel_rect)
+        self.control_panel = ControlPanel(self.panel_rect, self.config)
+        self.control_panel.dropdowns['scenario'].callback = self._on_scenario_changed
 
         # Wire button callbacks
         self.control_panel.buttons['start'].callback = self._on_start
@@ -163,11 +164,13 @@ class Dashboard:
 
         return scfg, is_interactive
 
+    def _on_scenario_changed(self, selected_value: str):
+        """Apply scenario-specific slider defaults only after a dropdown change."""
+        scenario_id = int(str(selected_value).split('-', 1)[0])
+        self.control_panel.set_scenario_defaults(get_scenario_config(scenario_id))
+
     def _on_start(self):
         """Start/restart simulation."""
-        selected_scenario_id = self.control_panel.dropdowns['scenario'].selected + 1
-        selected_scenario = get_scenario_config(selected_scenario_id)
-        self.control_panel.set_scenario_defaults(selected_scenario)
         panel_state = self.control_panel.get_state()
         scfg, is_interactive = self._build_scenario_config(panel_state)
 
@@ -357,7 +360,10 @@ class Dashboard:
             self.engine.pid.desired_distance = panel_state['desired_distance']
         if self.engine.camera:
             if panel_state['noise_on']:
-                self.engine.camera.noise_multiplier = panel_state['noise_level'] / 2.0
+                # noise_level is already assigned to noise_range_std above.
+                # Apply only scenario schedules as an additional multiplier.
+                if not self.engine.noise_schedule:
+                    self.engine.camera.noise_multiplier = 1.0
             else:
                 self.engine.camera.noise_multiplier = 0.01
 
